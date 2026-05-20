@@ -310,6 +310,10 @@
         <div class="components" id="recovery-components"></div>
       </div>
       <div class="card span-2">
+        <div class="card-eyebrow">Recovery score · 30 days</div>
+        <div class="chart-wrap"><canvas id="recovery-30d"></canvas></div>
+      </div>
+      <div class="card span-2">
         <div class="card-eyebrow">HRV · 30 days</div>
         <div class="chart-wrap"><canvas id="hrv-30d"></canvas></div>
       </div>
@@ -493,7 +497,14 @@
         <div id="personal-records" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; margin-top:8px;"></div>
       </div>
       <div class="card span-4">
-        <div class="card-eyebrow">All daily metrics</div>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <div class="card-eyebrow">All daily metrics</div>
+          <button id="export-csv"
+            style="background:var(--card-bg2); color:var(--fg2); border:1px solid var(--border); padding:5px 12px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:600; letter-spacing:.04em;"
+            title="Download all daily_metrics rows as a CSV file">
+            ⬇ Export CSV
+          </button>
+        </div>
         <div class="table-wrap"><table id="trends-table"></table></div>
       </div>
     </div>

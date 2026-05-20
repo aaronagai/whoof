@@ -598,6 +598,30 @@ async function loadRecovery() {
   // Trend charts
   const trend = data.trend || [];
   const labels = trend.map((r) => r.date.slice(5));
+
+  // 30-day recovery score chart with color-coded bars (green/yellow/red zones)
+  const recScores = trend.map((r) => r.recovery_score);
+  makeOrUpdate("recovery-30d", {
+    type: "bar",
+    data: { labels, datasets: [{
+      label: "Recovery %",
+      data: recScores,
+      backgroundColor: recScores.map((v) =>
+        v == null ? "transparent"
+        : v >= 67 ? COLORS.recGood
+        : v >= 33 ? COLORS.recMid
+        : COLORS.recBad
+      ),
+      borderWidth: 0,
+    }] },
+    options: commonOpts({
+      scales: {
+        x: { ticks: { color: COLORS.muted, maxRotation: 0, autoSkip: true }, grid: { color: COLORS.border } },
+        y: { min: 0, max: 100, ticks: { color: COLORS.muted }, grid: { color: COLORS.border } },
+      },
+    }),
+  });
+
   makeOrUpdate("hrv-30d", {
     type: "line",
     data: { labels, datasets: [{
@@ -1020,6 +1044,45 @@ async function loadProfile() {
 function initTrendsControls() {
   ["trend-metric", "trend-days"].forEach((id) =>
     $(id).addEventListener("change", () => loadTrends().catch((e) => setStatus("error: " + e.message))));
+  const btn = $("export-csv");
+  if (btn) btn.addEventListener("click", () => exportDailyMetricsCsv().catch((e) => setStatus("export failed: " + e.message)));
+}
+
+/**
+ * Fetch all daily_metrics rows and download them as a CSV file.
+ * Pure client-side — no upload anywhere.
+ */
+async function exportDailyMetricsCsv() {
+  const { days } = await fetchJSON("/api/history?days=3650");
+  if (!days || !days.length) {
+    setStatus("no data to export");
+    return;
+  }
+  // Union of all keys across rows, sorted with 'date' first.
+  const keySet = new Set();
+  for (const row of days) Object.keys(row).forEach((k) => keySet.add(k));
+  const keys = ["date", ...Array.from(keySet).filter((k) => k !== "date").sort()];
+
+  function escapeCell(v) {
+    if (v == null) return "";
+    const s = Array.isArray(v) ? v.join("|") : typeof v === "object" ? JSON.stringify(v) : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  }
+  const header = keys.join(",");
+  const rows = days.map((row) => keys.map((k) => escapeCell(row[k])).join(","));
+  const csv = [header, ...rows].join("\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `whoopfree-daily-metrics-${stamp}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  setStatus(`exported ${days.length} day${days.length === 1 ? "" : "s"} to CSV`);
 }
 
 /* ───────────────────────────── Boot ────────────────────────────────── */
