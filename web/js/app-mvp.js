@@ -1396,68 +1396,130 @@ window.addEventListener('whoop-data-changed', () => renderWeeklySummary());
 window.addEventListener('whoop-data-changed', () => renderTagCorrelations());
 
 // ----- Recovery calendar heatmap -------------------------------------------
-// 30-day grid: each cell = one day, coloured by recovery score.
-// Gray = no data. Cells are square divs arranged newest-right.
+// 30-day heatmap calendar. Metric is user-selectable via #cal-metric.
+// Gray = no data. Cells are square divs arranged oldest-left → newest-right.
 
-function recoveryColor(score) {
-  if (score == null) return 'var(--bg-3)';
-  if (score >= 67)   return 'var(--rec-good)';   // green
-  if (score >= 34)   return 'var(--rec-mid)';   // yellow
-  return 'var(--rec-bad)';                        // red
-}
+const CAL_METRICS = {
+  recovery_score: {
+    label: 'Recovery',
+    unit: '%',
+    fmt: (v) => Math.round(v) + '%',
+    color: (v) => {
+      if (v == null) return 'var(--bg-3)';
+      if (v >= 67) return 'var(--rec-good)';
+      if (v >= 34) return 'var(--rec-mid)';
+      return 'var(--rec-bad)';
+    },
+    legend: [
+      { label: '67–100', bg: 'var(--rec-good)' },
+      { label: '34–66',  bg: 'var(--rec-mid)' },
+      { label: '0–33',   bg: 'var(--rec-bad)' },
+    ],
+  },
+  sleep_performance_pct: {
+    label: 'Sleep perf',
+    unit: '%',
+    fmt: (v) => Math.round(v) + '%',
+    color: (v) => {
+      if (v == null) return 'var(--bg-3)';
+      if (v >= 85) return '#2563eb';   // bright blue
+      if (v >= 65) return '#60a5fa';   // medium blue
+      return '#bfdbfe';                // pale blue
+    },
+    legend: [
+      { label: '≥85%', bg: '#2563eb' },
+      { label: '65–84%', bg: '#60a5fa' },
+      { label: '<65%',  bg: '#bfdbfe' },
+    ],
+  },
+  strain_score: {
+    label: 'Strain',
+    unit: '/21',
+    fmt: (v) => v.toFixed(1),
+    color: (v) => {
+      if (v == null) return 'var(--bg-3)';
+      if (v >= 14) return '#f97316';   // dark orange
+      if (v >= 8)  return '#fbbf24';   // yellow-orange
+      return '#fef3c7';                // pale amber
+    },
+    legend: [
+      { label: '14–21',  bg: '#f97316' },
+      { label: '8–13.9', bg: '#fbbf24' },
+      { label: '0–7.9',  bg: '#fef3c7' },
+    ],
+  },
+  rmssd_ms: {
+    label: 'HRV',
+    unit: 'ms',
+    fmt: (v) => Math.round(v) + 'ms',
+    // Colour relative to the array median to account for individual variation.
+    color: null, // set dynamically
+    legend: [
+      { label: 'High',   bg: 'var(--rec-good)' },
+      { label: 'Mid',    bg: 'var(--rec-mid)' },
+      { label: 'Low',    bg: 'var(--rec-bad)' },
+    ],
+  },
+};
 
 async function renderRecoveryCal() {
   const el = document.getElementById('recovery-cal');
   if (!el) return;
   try {
+    const metricKey = document.getElementById('cal-metric')?.value ?? 'recovery_score';
+    const cfg = CAL_METRICS[metricKey] ?? CAL_METRICS.recovery_score;
+
     if (!db) db = await openDb();
     const metrics = await recentDailyMetrics(db, 30);
-    // Build a map date→score for fast lookup.
     const byDate = {};
-    for (const m of metrics) byDate[m.date] = m.recovery_score ?? null;
+    for (const m of metrics) byDate[m.date] = m[metricKey] ?? null;
 
-    // Generate 30 calendar cells from oldest to newest.
+    // For HRV use a dynamic colour function relative to the period median.
+    let colorFn = cfg.color;
+    if (!colorFn) {
+      const vals = metrics.map((m) => m[metricKey]).filter((v) => v != null).sort((a, b) => a - b);
+      const lo = vals[Math.floor(vals.length * 0.33)] ?? 0;
+      const hi = vals[Math.floor(vals.length * 0.67)] ?? Infinity;
+      colorFn = (v) => {
+        if (v == null) return 'var(--bg-3)';
+        if (v >= hi) return 'var(--rec-good)';
+        if (v >= lo) return 'var(--rec-mid)';
+        return 'var(--rec-bad)';
+      };
+    }
+
     const cells = [];
     const today = new Date();
     for (let i = 29; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
       const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      const score = byDate[iso] ?? null;
-      const label = score != null ? `${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}: ${Math.round(score)}%` : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      const val = byDate[iso] ?? null;
+      const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      const label = val != null ? `${dateStr}: ${cfg.fmt(val)}` : dateStr;
       const isToday = i === 0;
       cells.push(`<div title="${label}" data-cal-date="${iso}" style="
         width:28px; height:28px; border-radius:5px; flex-shrink:0;
-        background:${recoveryColor(score)};
-        opacity:${score == null ? 0.35 : 1};
-        box-sizing:border-box;
-        cursor:pointer;
+        background:${colorFn(val)};
+        opacity:${val == null ? 0.35 : 1};
+        box-sizing:border-box; cursor:pointer;
         border: ${isToday ? '2px solid var(--fg)' : '2px solid transparent'};
       "></div>`);
     }
 
-    // Day-of-week labels (Mon…Sun aligned to first row).
-    const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-    const labelRow = dayLabels.map((l) =>
-      `<div style="width:28px; text-align:center; font-size:9px; color:var(--muted);">${l}</div>`
-    ).join('');
-
-    // Legend.
-    const legend = `
-      <div style="display:flex; gap:6px; align-items:center; margin-top:8px; font-size:10px; color:var(--muted);">
-        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--rec-good);"></span>Green (67–100)
-        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--rec-mid);"></span>Yellow (34–66)
-        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--rec-bad);"></span>Red (0–33)
-        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--bg-3);opacity:.35;border:1px solid var(--border);"></span>No data
-      </div>`;
+    const legendHtml = cfg.legend.map((l) =>
+      `<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${l.bg};margin-right:2px;"></span>${l.label}`
+    ).join('  ');
 
     el.innerHTML = `
       <div style="display:flex; gap:4px; flex-wrap:wrap; max-width:100%;">
         ${cells.join('')}
       </div>
-      ${legend}`;
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; font-size:10px; color:var(--muted);">
+        ${legendHtml}
+        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--bg-3);opacity:.35;border:1px solid var(--border);margin-right:2px;"></span>No data
+      </div>`;
 
-    // Wire click-to-navigate: clicking a cell jumps to Recovery tab for that day.
     el.querySelectorAll('[data-cal-date]').forEach((cell) => {
       cell.addEventListener('click', () => {
         window.dispatchEvent(new CustomEvent('whoop-browse-recovery', { detail: { date: cell.dataset.calDate } }));
@@ -1467,6 +1529,9 @@ async function renderRecoveryCal() {
     console.warn('[recovery-cal] render failed', err);
   }
 }
+
+// Re-render calendar when metric picker changes.
+document.getElementById('cal-metric')?.addEventListener('change', () => renderRecoveryCal());
 
 window.addEventListener('hashchange', () => {
   if (location.hash === '#trends') renderRecoveryCal();
