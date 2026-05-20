@@ -510,6 +510,24 @@ async function loadRecovery() {
       <span style="color:${color}">(${sign}${pct}%)</span>
     </div>`;
   }
+  // Resting HR baseline tag line — computed from trend data (prior days only)
+  let rhrTagLine = "";
+  if (m.resting_hr != null) {
+    const trend = data.trend || [];
+    const rhrHist = trend.slice(0, -1).map((r) => r.resting_hr).filter((v) => v != null);
+    if (rhrHist.length >= 3) {
+      const rhrBase = rhrHist.reduce((a, b) => a + b, 0) / rhrHist.length;
+      const delta = m.resting_hr - rhrBase;
+      const sign = delta >= 0 ? "+" : "−";
+      // Elevated RHR is a bad sign; lower is good.
+      const color = delta > 3 ? COLORS.recBad : delta < -3 ? COLORS.recGood : COLORS.muted;
+      rhrTagLine = `<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">
+        RHR today <strong style="color:var(--fg)">${Math.round(m.resting_hr)} bpm</strong>
+        vs. 14-day baseline <strong style="color:var(--fg)">${Math.round(rhrBase)} bpm</strong>
+        <span style="color:${color}">(${sign}${Math.abs(delta).toFixed(1)} bpm)</span>
+      </div>`;
+    }
+  }
   // Skin temp baseline tag line (today vs. 14-day baseline)
   let skinTagLine = "";
   if (m.avg_skin_temp_c != null && m.skin_temp_deviation_c != null) {
@@ -521,7 +539,7 @@ async function loadRecovery() {
       (<span style="color:${color}">${sign}${Math.abs(dev).toFixed(2)}°C vs. baseline</span>)
     </div>`;
   }
-  $("recovery-components").innerHTML = hrvTagLine + skinTagLine + comps.map((c) => `
+  $("recovery-components").innerHTML = hrvTagLine + rhrTagLine + skinTagLine + comps.map((c) => `
     <div class="component-row">
       <div class="name">${c.name}</div>
       <div class="barwrap"><div class="bar" style="width:${c.v == null ? 0 : Math.max(0, Math.min(100, c.v))}%;background:${recoveryColor(c.v)}"></div></div>
