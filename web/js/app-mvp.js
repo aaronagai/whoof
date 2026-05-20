@@ -409,11 +409,19 @@ async function seedIfEmptyOrStale() {
       window.dispatchEvent(new Event('whoop-data-changed'));
     }
   }
-  // Always refresh the data-health indicator, insights, and plan after seed/skip.
-  // This is the right moment: DB is open and data is in a consistent state.
-  // Running here (vs a bare module-level call) avoids the race where these
-  // functions fire while seedDemoData is mid-insert.
-  await Promise.all([refreshHealth(), renderInsights(), renderDailyPlan()]);
+  // Always refresh the data-health indicator, insights, plan, and trend-tab
+  // panels after seed/skip.  This is the right moment: DB is open and data is
+  // in a consistent state.  Running here (vs a bare module-level call) avoids
+  // the race where these functions fire while seedDemoData is mid-insert.
+  await Promise.all([
+    refreshHealth(),
+    renderInsights(),
+    renderDailyPlan(),
+    renderWeeklySummary(),
+    renderRecoveryCal(),
+    renderTagCorrelations(),
+    renderPoincareePlot(),
+  ]);
 })();
 
 // Exposed so a "Reset & re-seed" button or dev console can force a refresh.
