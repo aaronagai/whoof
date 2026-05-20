@@ -399,14 +399,24 @@ async function loadOverview() {
   }
   $("now-battery").textContent = overview.battery ? overview.battery.detail : "—";
 
-  // 7-day recovery sparkline
+  // 7-day sparklines (recovery, sleep, strain) — symmetric trends in the three rings
   const trend7 = overview.trend7 || [];
-  if ($("recovery-sparkline") && trend7.length > 1) {
-    makeOrUpdate("recovery-sparkline", {
-      type: "line",
-      data: {
-        labels: trend7.map((r) => r.date.slice(5)),
-        datasets: [{
+  const sparkOpts = (yMin, yMax) => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false,
+    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+    scales: {
+      x: { display: false },
+      y: { display: false, min: yMin, max: yMax },
+    },
+  });
+  if (trend7.length > 1) {
+    const labels = trend7.map((r) => r.date.slice(5));
+    if ($("recovery-sparkline")) {
+      makeOrUpdate("recovery-sparkline", {
+        type: "line",
+        data: { labels, datasets: [{
           data: trend7.map((r) => r.recovery_score),
           borderColor: recoveryColor(m.recovery_score),
           backgroundColor: "transparent",
@@ -414,19 +424,37 @@ async function loadOverview() {
           pointRadius: 2,
           pointBackgroundColor: trend7.map((r) => recoveryColor(r.recovery_score)),
           tension: 0.3,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
-        plugins: { legend: { display: false }, tooltip: { enabled: false } },
-        scales: {
-          x: { display: false },
-          y: { display: false, min: 0, max: 100 },
-        },
-      },
-    });
+        }] },
+        options: sparkOpts(0, 100),
+      });
+    }
+    if ($("sleep-sparkline")) {
+      makeOrUpdate("sleep-sparkline", {
+        type: "line",
+        data: { labels, datasets: [{
+          data: trend7.map((r) => r.sleep_performance_pct),
+          borderColor: COLORS.sleep,
+          backgroundColor: "transparent",
+          borderWidth: 1.5,
+          pointRadius: 2,
+          pointBackgroundColor: COLORS.sleep,
+          tension: 0.3,
+        }] },
+        options: sparkOpts(0, 100),
+      });
+    }
+    if ($("strain-sparkline")) {
+      // Strain is 0–21 on Whoop's Borg-derived scale
+      makeOrUpdate("strain-sparkline", {
+        type: "bar",
+        data: { labels, datasets: [{
+          data: trend7.map((r) => r.strain_score),
+          backgroundColor: COLORS.strain,
+          borderWidth: 0,
+        }] },
+        options: sparkOpts(0, 21),
+      });
+    }
   }
 
   // Recent workouts

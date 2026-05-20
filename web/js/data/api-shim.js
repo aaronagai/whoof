@@ -149,9 +149,11 @@ async function apiOverview() {
   const recentMetrics = await recentDailyMetrics(d, 14);
   const trend7 = recentMetrics.slice(0, 7).reverse().map((r) => ({
     date: r.date,
-    recovery_score: r.recovery_score ?? null,
-    rmssd_ms:       r.rmssd_ms       ?? null,
-    strain_score:   r.strain_score   ?? null,
+    recovery_score:        r.recovery_score        ?? null,
+    rmssd_ms:              r.rmssd_ms              ?? null,
+    strain_score:          r.strain_score          ?? null,
+    sleep_performance_pct: r.sleep_performance_pct ?? null,
+    sleep_minutes:         r.sleep_minutes         ?? null,
   }));
 
   return {
