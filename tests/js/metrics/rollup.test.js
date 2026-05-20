@@ -95,6 +95,21 @@ describe('rollupDay', () => {
     // so strain calibration is different. Just confirm we got a value.
     expect(dm.strain_score).toBeGreaterThanOrEqual(0);
   });
+
+  it('populates hrv_baseline_ms once 3 prior days with HRV data exist', async () => {
+    // Seed 4 consecutive days. Each has RR intervals during sleep so rmssd is non-null.
+    const days = ['2026-05-17', '2026-05-18', '2026-05-19', '2026-05-20'];
+    for (const d of days) await insertSamplesBatch(db, syntheticDay(d));
+    // Roll up in order so each day has history from the previous ones.
+    for (const d of days) await rollupDay(db, d);
+
+    const dm17 = await getDailyMetric(db, '2026-05-17');
+    const dm20 = await getDailyMetric(db, '2026-05-20');
+    // Day 17 has no prior days → baseline should be null.
+    expect(dm17.hrv_baseline_ms).toBeNull();
+    // Day 20 has 3 prior days with HRV → baseline should be a positive number.
+    expect(dm20.hrv_baseline_ms).toBeGreaterThan(0);
+  });
 });
 
 describe('rollupMissing', () => {

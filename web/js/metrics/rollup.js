@@ -234,6 +234,7 @@ export async function rollupDay(db, dateIso, { ageOverride = null } = {}) {
     max_hr: hrs.length ? round(Math.max(...hrs), 1) : null,
     resting_hr: round(resting, 1),
     rmssd_ms: round(todayRmssd, 1),
+    hrv_baseline_ms: rmssdHist.length >= 3 ? round(mean(rmssdHist), 1) : null,
     sdnn_ms: sleepRrs.length ? round(sdnn(sleepRrs) ?? 0, 1) : null,
     pnn50_pct: sleepRrs.length ? round(pnn50(sleepRrs) ?? 0, 1) : null,
     avg_spo2: round(mean(spo2s), 1),

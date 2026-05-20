@@ -422,7 +422,20 @@ async function loadRecovery() {
     { name: "Sleep",     v: m.recovery_sleep_component },
     { name: "Prior strain", v: m.recovery_strain_component },
   ];
-  $("recovery-components").innerHTML = comps.map((c) => `
+  // HRV baseline tag line (today vs. 14-day baseline)
+  let hrvTagLine = "";
+  if (m.rmssd_ms != null && m.hrv_baseline_ms != null) {
+    const delta = m.rmssd_ms - m.hrv_baseline_ms;
+    const pct = Math.abs(delta / m.hrv_baseline_ms * 100).toFixed(0);
+    const sign = delta >= 0 ? "+" : "−";
+    const color = delta >= 0 ? COLORS.recGood : COLORS.recBad;
+    hrvTagLine = `<div style="font-size:10px;color:var(--muted);margin-bottom:8px;">
+      HRV today <strong style="color:var(--fg)">${m.rmssd_ms.toFixed(0)} ms</strong>
+      vs. 14-day baseline <strong style="color:var(--fg)">${m.hrv_baseline_ms.toFixed(0)} ms</strong>
+      <span style="color:${color}">(${sign}${pct}%)</span>
+    </div>`;
+  }
+  $("recovery-components").innerHTML = hrvTagLine + comps.map((c) => `
     <div class="component-row">
       <div class="name">${c.name}</div>
       <div class="barwrap"><div class="bar" style="width:${c.v == null ? 0 : Math.max(0, Math.min(100, c.v))}%;background:${recoveryColor(c.v)}"></div></div>
