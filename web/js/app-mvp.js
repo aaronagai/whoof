@@ -1128,7 +1128,6 @@ window.addEventListener('hashchange', () => {
 
 // ----- Activity journal ----------------------------------------------------
 
-const KNOWN_TAGS = ['alcohol', 'illness', 'stress', 'travel', 'race', 'goodsleep', 'hardworkout', 'caffeine', 'meditation', 'cold', 'nap'];
 let _selectedTags = new Set();
 
 function wireJournal() {
