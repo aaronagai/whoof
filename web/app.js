@@ -59,6 +59,43 @@ function strainLabel(s) {
   return "All-out";
 }
 
+/* ───────────────────────────── Date navigation ─────────────────────── */
+// null = "today" (live data). YYYY-MM-DD string = historical view.
+let _browseDate = null;
+
+function todayIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function offsetDate(iso, deltaDays) {
+  const d = new Date(iso + "T12:00:00");
+  d.setDate(d.getDate() + deltaDays);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function renderDateNav(elId, iso) {
+  const el = $(elId);
+  if (!el) return;
+  const todayStr = todayIso();
+  const isToday = iso === todayStr;
+  el.innerHTML = `
+    <span style="display:inline-flex;gap:4px;align-items:center;">
+      <button class="date-nav-btn" data-delta="-1" style="font-size:13px;padding:1px 6px;line-height:1.4;" title="Previous day">‹</button>
+      <span style="font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap;">${new Date(iso + "T12:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</span>
+      <button class="date-nav-btn" data-delta="+1" ${isToday ? "disabled" : ""} style="font-size:13px;padding:1px 6px;line-height:1.4;" title="Next day">›</button>
+    </span>`;
+  el.querySelectorAll(".date-nav-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const delta = parseInt(btn.dataset.delta, 10);
+      const next = offsetDate(iso, delta);
+      if (next > todayStr) return; // never go into the future
+      _browseDate = next;
+      loadActiveTab().catch((e) => setStatus("error: " + e.message));
+    });
+  });
+}
+
 async function fetchJSON(url, opts) {
   // Try the in-browser IndexedDB shim first (v0.3). If it returns null,
   // the path isn't routed — fall back to network fetch for compatibility.
@@ -78,6 +115,8 @@ let activeTab = "overview";
 
 function setTab(name) {
   if (!TABS.includes(name)) name = "overview";
+  // Reset date navigation when the user explicitly switches tabs.
+  if (name !== activeTab) _browseDate = null;
   activeTab = name;
   document.querySelectorAll(".tab").forEach((t) =>
     t.classList.toggle("active", t.dataset.tab === name));
@@ -406,10 +445,9 @@ function renderWorkoutList(el, workouts) {
 /* ───────────────────────────── Recovery tab ────────────────────────── */
 
 async function loadRecovery() {
-  const data = await fetchJSON("/api/recovery");
-  $("recovery-date").textContent = new Date(data.date).toLocaleDateString(undefined, {
-    weekday: "long", month: "short", day: "numeric",
-  });
+  const dateParam = _browseDate ?? todayIso();
+  const data = await fetchJSON(`/api/recovery?date=${dateParam}`);
+  renderDateNav("recovery-date", data.date ?? dateParam);
 
   const m = data.summary || {};
   drawRecoveryRing($("recovery-ring-big"), m.recovery_score, true);
@@ -478,10 +516,9 @@ async function loadRecovery() {
 /* ───────────────────────────── Sleep tab ───────────────────────────── */
 
 async function loadSleep() {
-  const data = await fetchJSON("/api/sleep");
-  $("sleep-date").textContent = "Night of " + new Date(data.date).toLocaleDateString(undefined, {
-    weekday: "long", month: "short", day: "numeric",
-  });
+  const dateParam = _browseDate ?? todayIso();
+  const data = await fetchJSON(`/api/sleep?date=${dateParam}`);
+  renderDateNav("sleep-date", data.date ?? dateParam);
 
   const m = data.summary || {};
   drawHypnogram($("hypnogram"), data.stages);
@@ -520,10 +557,9 @@ async function loadSleep() {
 /* ───────────────────────────── Strain tab ──────────────────────────── */
 
 async function loadStrain() {
-  const data = await fetchJSON("/api/strain");
-  $("strain-date").textContent = new Date(data.date).toLocaleDateString(undefined, {
-    weekday: "long", month: "short", day: "numeric",
-  });
+  const dateParam = _browseDate ?? todayIso();
+  const data = await fetchJSON(`/api/strain?date=${dateParam}`);
+  renderDateNav("strain-date", data.date ?? dateParam);
   const m = data.summary || {};
   $("strain-big").textContent = m.strain_score == null ? "—" : m.strain_score.toFixed(1);
   $("strain-label").textContent = strainLabel(m.strain_score);
