@@ -1,8 +1,11 @@
-// Service worker for MS Vitality PWA.
-// Strategy: cache-first for static assets, network-first for HTML.
-// IndexedDB data is always local, so no special SW handling is needed for it.
+// Service worker for whoopfree PWA.
+// Strategy: network-first for HTML and same-origin JS/CSS (so updates land
+// immediately on refresh), cache-first only for static immutable assets
+// (fonts, vendor bundles). IndexedDB is always local — no SW handling.
 
-const CACHE_NAME = 'ms-vitality-v1';
+// Bump this version any time the caching strategy or precache list changes
+// so old caches are pruned on activate.
+const CACHE_NAME = 'whoopfree-v3';
 
 // Assets to pre-cache on install. Paths are relative to SW scope (/)
 const PRECACHE = [
@@ -37,7 +40,18 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// ---- Fetch: cache-first for JS/CSS/fonts, network-first for HTML -----------
+// ---- Fetch: network-first for HTML and app code, cache-first for vendor ----
+
+// Paths that are safe to cache-first (immutable vendor bundles, fonts).
+const IMMUTABLE_PATHS = [
+  '/vendor/',
+  '/icons/',
+  '/manifest.json',
+];
+
+function isImmutable(url) {
+  return IMMUTABLE_PATHS.some((p) => url.pathname.startsWith(p));
+}
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
@@ -49,13 +63,16 @@ self.addEventListener('fetch', (event) => {
   // Skip BLE / WebSocket / API traffic.
   if (url.pathname.startsWith('/api/')) return;
 
-  // HTML: network-first so the user always gets fresh markup.
-  if (request.destination === 'document') {
+  // Network-first for HTML and app code (so design changes land immediately).
+  // Falls back to cached copy when offline.
+  if (request.destination === 'document' || !isImmutable(url)) {
     event.respondWith(
       fetch(request)
         .then((res) => {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+          if (res && res.status === 200) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+          }
           return res;
         })
         .catch(() => caches.match(request)),
@@ -63,7 +80,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets (JS, CSS, fonts, images): cache-first.
+  // Cache-first for immutable vendor assets (fonts, vendor bundles).
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
