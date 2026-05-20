@@ -190,7 +190,31 @@ function commonOpts(extra = {}) {
     responsive: true,
     maintainAspectRatio: false,
     animation: false,
-    plugins: { legend: { labels: { color: COLORS.fg2 } } },
+    plugins: {
+      legend: {
+        labels: {
+          color: COLORS.fg2,
+          usePointStyle: true,
+          pointStyle: "circle",
+          boxWidth: 6,
+          boxHeight: 6,
+          padding: 14,
+          font: { size: 11, weight: "600", family: "Inter, system-ui, sans-serif" },
+        },
+        align: "end",
+      },
+      tooltip: {
+        backgroundColor: "rgba(15,15,20,0.95)",
+        borderColor: "rgba(255,255,255,0.06)",
+        borderWidth: 1,
+        padding: 10,
+        cornerRadius: 8,
+        titleFont: { size: 11, weight: "600" },
+        bodyFont: { size: 12 },
+        displayColors: true,
+        boxPadding: 4,
+      },
+    },
     scales: {
       x: { ticks: { color: COLORS.muted, maxRotation: 0, autoSkip: true }, grid: { color: COLORS.border } },
       y: { ticks: { color: COLORS.muted }, grid: { color: COLORS.border } },
@@ -375,43 +399,50 @@ async function loadOverview() {
 
   // ─── Sleep ring (blue) ─────────────────────────────────────────
   if ($("sleep-ring")) {
-    drawRing($("sleep-ring"), m.sleep_performance_pct, "#819BFF", 100, { stroke: 18, colorTo: "#4D7CFF" });
+    // Treat 0 sleep minutes as "no data" — rollup writes zeros when no sleep window detected
+    const hasSleep = m.sleep_minutes != null && m.sleep_minutes > 0;
+    const sleepPerf = hasSleep ? m.sleep_performance_pct : null;
+    drawRing($("sleep-ring"), sleepPerf, "#819BFF", 100, { stroke: 18, colorTo: "#4D7CFF" });
     const asleep = m.sleep_minutes || 0;
     const hours = Math.floor(asleep / 60), mins = asleep % 60;
     if ($("sleep-ring-num")) {
-      $("sleep-ring-num").textContent = m.sleep_performance_pct != null ? Math.round(m.sleep_performance_pct) : "—";
+      $("sleep-ring-num").textContent = hasSleep ? Math.round(sleepPerf) : "—";
+      $("sleep-ring-num").style.color = hasSleep ? "var(--text)" : "var(--text-faint)";
     }
     if ($("sleep-perf")) {
-      $("sleep-perf").textContent = m.sleep_performance_pct != null ? "of sleep need met" : "no sleep recorded";
+      $("sleep-perf").textContent = hasSleep ? "of sleep need met" : "no sleep recorded";
     }
     if ($("sleep-ring-foot")) {
-      $("sleep-ring-foot").innerHTML = m.sleep_performance_pct != null
+      $("sleep-ring-foot").innerHTML = hasSleep
         ? `<span><strong>${hours}h ${mins}m</strong> asleep</span>`
-        : `<span>Connect strap to record sleep</span>`;
+        : `<span>Wear strap overnight to record sleep</span>`;
     }
   }
 
   // ─── Recovery ring (green/yellow/red) ──────────────────────────
   if ($("recovery-ring")) {
-    const color = recoveryColor(m.recovery_score);
-    drawRing($("recovery-ring"), m.recovery_score, color, 100, { stroke: 22 });
+    // Treat recovery_score=0 with no HRV as "no data" (rollup writes 0 when no overnight HRV)
+    const hasRec = m.recovery_score != null && m.recovery_score > 0 && m.rmssd_ms != null;
+    const recScore = hasRec ? m.recovery_score : null;
+    const color = recoveryColor(recScore);
+    drawRing($("recovery-ring"), recScore, color, 100, { stroke: 22 });
     if ($("recovery-ring-num")) {
-      $("recovery-ring-num").textContent = m.recovery_score != null ? Math.round(m.recovery_score) : "—";
-      $("recovery-ring-num").style.color = m.recovery_score == null ? "var(--text-faint)" : "var(--text)";
+      $("recovery-ring-num").textContent = hasRec ? Math.round(recScore) : "—";
+      $("recovery-ring-num").style.color = hasRec ? "var(--text)" : "var(--text-faint)";
     }
     if ($("recovery-meta")) {
-      if (m.recovery_score == null) {
-        $("recovery-meta").textContent = "needs overnight data";
+      if (!hasRec) {
+        $("recovery-meta").textContent = "needs overnight HRV";
+        $("recovery-meta").style.color = "var(--text-faint)";
       } else {
         const labels = { good: "OPTIMAL", mid: "ADEQUATE", bad: "LOW" };
-        const tier = m.recovery_score >= 67 ? "good" : m.recovery_score >= 33 ? "mid" : "bad";
+        const tier = recScore >= 67 ? "good" : recScore >= 33 ? "mid" : "bad";
         $("recovery-meta").textContent = labels[tier];
         $("recovery-meta").style.color = color;
       }
     }
     if ($("recovery-ring-foot")) {
-      if (m.recovery_score != null) {
-        // Compute baseline deltas from trend7 (yesterday backward).
+      if (hasRec) {
         const prior = trend7.slice(0, -1);
         const hrvBase = (() => {
           const vs = prior.map((r) => r.rmssd_ms).filter((v) => v != null);
@@ -887,22 +918,32 @@ async function loadStrain() {
   const data = await fetchJSON(`/api/strain?date=${dateParam}`);
   renderDateNav("strain-date", data.date ?? dateParam);
   const m = data.summary || {};
+  // Hero ring
+  if ($("strain-hero-ring")) {
+    drawRing($("strain-hero-ring"), m.strain_score, "#03B5F3", 21, { stroke: 22, colorTo: "#00D4FF" });
+  }
   $("strain-big").textContent = m.strain_score == null ? "—" : m.strain_score.toFixed(1);
-  $("strain-label").textContent = strainLabel(m.strain_score);
+  $("strain-label").textContent = m.strain_score == null ? "no activity yet" : strainLabel(m.strain_score).toUpperCase();
+  if ($("strain-label")) $("strain-label").style.color = m.strain_score == null ? "var(--text-faint)" : "var(--strain)";
   if ($("strain-target")) {
     const coach = recoveryCoach(m.recovery_score);
     $("strain-target").textContent = coach ? `Based on recovery: ${coach.split("·")[1]?.trim() ?? ""}` : "";
   }
   $("strain-cals").textContent = fmtInt(m.calories);
 
-  // Zones row
+  // Zones row — modernised with vertical bars + labels
   const zoneMins = (m && m.zone_minutes) || [0, 0, 0, 0, 0];
+  const maxZ = Math.max(...zoneMins, 1);
+  const zoneColors = [COLORS.zone[0], COLORS.zone[1], COLORS.zone[2], COLORS.zone[3], COLORS.zone[4]];
   const zoneRow = $("zones-row");
   zoneRow.innerHTML = ["Z1", "Z2", "Z3", "Z4", "Z5"].map((nm, i) => `
-    <div class="z z${i + 1}">
-      <div class="name">${nm}</div>
-      <div class="v">${fmtHM(zoneMins[i])}</div>
-      <div class="sub">${zonePctLabel(i)}</div>
+    <div class="zone-cell">
+      <div style="height:60px; display:flex; align-items:end; justify-content:center; margin-bottom:8px;">
+        <div style="width:18px; height:${Math.max(4, (zoneMins[i] / maxZ) * 60)}px; background:${zoneColors[i]}; border-radius:4px; box-shadow:0 0 12px ${zoneColors[i]}66;"></div>
+      </div>
+      <div class="zlbl">${nm}</div>
+      <div class="zval">${fmtHM(zoneMins[i])}</div>
+      <div style="font-size:9px; color:var(--text-faint); margin-top:2px;">${zonePctLabel(i)}</div>
     </div>
   `).join("");
 

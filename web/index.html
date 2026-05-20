@@ -482,19 +482,32 @@
       <span class="panel-date" id="strain-date"></span>
     </header>
     <div class="grid">
-      <div class="card">
-        <div class="card-eyebrow">Day strain</div>
-        <div class="big-num"><span id="strain-big">—</span><span class="unit">/21</span></div>
-        <div class="muted" id="strain-label"></div>
-        <div id="strain-target" style="font-size:11px; color:var(--muted); margin-top:3px;"></div>
+      <div class="ring-card strain span-2" style="display:flex; flex-direction:column;">
+        <div class="ring-eyebrow">Day strain</div>
+        <div class="ring-wrap" style="margin: 18px auto; width: 260px; height: 260px;">
+          <svg id="strain-hero-ring" viewBox="0 0 300 300"></svg>
+          <div class="ring-value">
+            <div class="num big" id="strain-big">—</div>
+            <div class="sub" id="strain-label">—</div>
+          </div>
+        </div>
+        <div id="strain-target" style="font-size:13px; color:var(--text-2); text-align:center; line-height:1.55; margin-top:6px;"></div>
       </div>
       <div class="card">
-        <div class="card-eyebrow">Calories</div>
-        <div class="big-num"><span id="strain-cals">—</span><span class="unit">kcal</span></div>
+        <span class="card-eyebrow">Calories</span>
+        <div class="big-num" style="font-size:44px; margin-top:12px; color: var(--warn);"><span id="strain-cals">—</span><span class="unit" style="color:var(--text-muted);">kcal</span></div>
       </div>
-      <div class="card span-2">
-        <div class="card-eyebrow">Time in zones</div>
-        <div class="zones-row" id="zones-row"></div>
+      <div class="card" id="acwr-card">
+        <span class="card-eyebrow" title="Acute (7d) / Chronic (21d) workload ratio. Sweet spot 0.8–1.3; >1.5 = injury risk; <0.6 = detraining.">Training load (ACWR)</span>
+        <div style="display:flex; align-items:baseline; gap:10px; margin-top:12px;">
+          <div class="big-num" style="font-size:44px;"><span id="acwr-ratio">—</span></div>
+          <div id="acwr-band" style="font-size:10px; font-weight:700; letter-spacing:.12em;">—</div>
+        </div>
+        <div id="acwr-detail" style="font-size:11px; color:var(--text-muted); margin-top:6px;"></div>
+      </div>
+      <div class="card span-4">
+        <span class="card-eyebrow">Time in zones</span>
+        <div class="zones-row" id="zones-row" style="margin-top:14px;"></div>
       </div>
       <div class="card span-3">
         <div class="card-eyebrow">Strain curve · today</div>
