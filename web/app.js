@@ -796,6 +796,29 @@ async function loadSleep() {
     }] },
     options: commonOpts(),
   });
+
+  // 30-day quality-score bars (same color zones as Quality card)
+  const qScores = trend.map((r) => r.quality_score);
+  makeOrUpdate("sleep-quality-trend", {
+    type: "bar",
+    data: { labels: tLabels, datasets: [{
+      label: "Quality /100",
+      data: qScores,
+      backgroundColor: qScores.map((v) =>
+        v == null ? "transparent"
+        : v >= 80 ? COLORS.recGood
+        : v >= 60 ? COLORS.recMid
+        : COLORS.recBad
+      ),
+      borderWidth: 0,
+    }] },
+    options: commonOpts({
+      scales: {
+        x: { ticks: { color: COLORS.muted, maxRotation: 0, autoSkip: true }, grid: { color: COLORS.border } },
+        y: { min: 0, max: 100, ticks: { color: COLORS.muted }, grid: { color: COLORS.border } },
+      },
+    }),
+  });
 }
 
 /* ───────────────────────────── Strain tab ──────────────────────────── */

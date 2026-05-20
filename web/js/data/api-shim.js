@@ -180,11 +180,16 @@ async function apiSleep(dayIso) {
     .reverse()
     .map((r) => ({
       date: r.date,
-      sleep_minutes:       r.sleep_minutes ?? null,
-      deep_sleep_minutes:  r.deep_sleep_minutes ?? null,
-      rem_sleep_minutes:   r.rem_sleep_minutes ?? null,
-      light_sleep_minutes: r.light_sleep_minutes ?? null,
-      respiratory_rate:    r.respiratory_rate ?? null,
+      sleep_minutes:         r.sleep_minutes         ?? null,
+      deep_sleep_minutes:    r.deep_sleep_minutes    ?? null,
+      rem_sleep_minutes:     r.rem_sleep_minutes     ?? null,
+      light_sleep_minutes:   r.light_sleep_minutes   ?? null,
+      wake_minutes:          r.wake_minutes          ?? null,
+      respiratory_rate:      r.respiratory_rate      ?? null,
+      sleep_performance_pct: r.sleep_performance_pct ?? null,
+      sleep_consistency_pct: r.sleep_consistency_pct ?? null,
+      sleep_debt_minutes:    r.sleep_debt_minutes    ?? null,
+      quality_score:         sleepQualityScore(r).score,
     }));
   const quality = sleepQualityScore(m);
   return {
