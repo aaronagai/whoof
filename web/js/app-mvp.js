@@ -7,7 +7,7 @@ import { openDb } from './data/db.js';
 import { insertSamplesBatch, startSession, endSession, logEvent } from './data/queries.js';
 import { isoUtcNow } from './util/time.js';
 import { seedDemoData } from './dev/seed.js';
-import { exportAllToJson, importAllFromJson, exportSamplesCsv, exportDailyMetricsCsv, exportJournalCsv } from './data/export.js';
+import { exportAllToJson, importAllFromJson, exportSamplesCsv, exportDailyMetricsCsv, exportJournalCsv, exportWorkoutsCsv } from './data/export.js';
 import {
   startHealthPolling, readShortcutResult, triggerWeightShortcut, buildIngestUrl,
 } from './health/sync.js';
@@ -915,6 +915,21 @@ if (journalCsvBtn) journalCsvBtn.addEventListener('click', async () => {
     setDataStatus('Export failed: ' + (err.message ?? err), '#f55');
   }
   journalCsvBtn.disabled = false;
+});
+
+const workoutsCsvBtn = $('mvp-export-workouts-csv');
+if (workoutsCsvBtn) workoutsCsvBtn.addEventListener('click', async () => {
+  workoutsCsvBtn.disabled = true;
+  setDataStatus('Exporting workouts…');
+  try {
+    if (!db) db = await openDb();
+    const blob = await exportWorkoutsCsv(db);
+    triggerDownload(blob, `ms-vitality-workouts-${new Date().toISOString().slice(0, 10)}.csv`);
+    setDataStatus(`Exported ${(blob.size / 1024).toFixed(1)} KB`, '#2a8');
+  } catch (err) {
+    setDataStatus('Export failed: ' + (err.message ?? err), '#f55');
+  }
+  workoutsCsvBtn.disabled = false;
 });
 
 importFile.addEventListener('change', async () => {

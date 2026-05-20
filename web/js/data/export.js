@@ -147,6 +147,35 @@ export async function exportJournalCsv(db = null) {
   return new Blob([lines.join('\n')], { type: 'text/csv' });
 }
 
+export async function exportWorkoutsCsv(db = null) {
+  const d = db ?? (await openDb());
+  const rows = await getAll(d, 'workouts');
+  rows.sort((a, b) => (a.start_utc < b.start_utc ? -1 : 1));
+  const lines = ['date,start_utc,duration_min,avg_hr,max_hr,strain,calories,zone1_min,zone2_min,zone3_min,zone4_min,zone5_min,label'];
+  for (const r of rows) {
+    const durMin = r.duration_seconds != null ? Math.round(r.duration_seconds / 60 * 10) / 10 : '';
+    let zones = [0, 0, 0, 0, 0];
+    if (r.zone_seconds) {
+      try {
+        const zs = typeof r.zone_seconds === 'string' ? JSON.parse(r.zone_seconds) : r.zone_seconds;
+        zones = zs.map((s) => Math.round(s / 60 * 10) / 10);
+      } catch { /* ignore malformed */ }
+    }
+    lines.push(csvRow([
+      r.date ?? '',
+      r.start_utc ?? '',
+      durMin,
+      r.avg_hr != null ? Math.round(r.avg_hr) : '',
+      r.max_hr != null ? Math.round(r.max_hr) : '',
+      r.strain != null ? r.strain.toFixed(1) : '',
+      r.calories != null ? Math.round(r.calories) : '',
+      ...zones,
+      r.label ?? '',
+    ]));
+  }
+  return new Blob([lines.join('\n')], { type: 'text/csv' });
+}
+
 export async function importAllFromJson(payload, db = null) {
   if (!payload || typeof payload !== 'object') {
     throw new Error('Import payload is not an object');

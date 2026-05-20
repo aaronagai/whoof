@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { openDb } from '../../../web/js/data/db.js';
 import { upsertDailyMetric } from '../../../web/js/data/queries.js';
-import { exportAllToJson, importAllFromJson, buildExportPayload, exportJournalCsv } from '../../../web/js/data/export.js';
-import { upsertJournalEntry } from '../../../web/js/data/queries.js';
+import { exportAllToJson, importAllFromJson, buildExportPayload, exportJournalCsv, exportWorkoutsCsv } from '../../../web/js/data/export.js';
+import { upsertJournalEntry, replaceWorkoutsForDate } from '../../../web/js/data/queries.js';
 
 const TEST_DB = 'whoopfree-export-test';
 
@@ -113,6 +113,41 @@ function blobToText(blob) {
     fr.readAsText(blob);
   });
 }
+
+describe('exportWorkoutsCsv', () => {
+  it('returns a Blob with header row when no workouts', async () => {
+    const blob = await exportWorkoutsCsv(db);
+    expect(blob).toBeInstanceOf(Blob);
+    const text = await blobToText(blob);
+    expect(text.startsWith('date,start_utc,duration_min')).toBe(true);
+  });
+
+  it('includes workouts sorted oldest-first with correct fields', async () => {
+    await replaceWorkoutsForDate(db, '2026-05-19', [
+      {
+        date: '2026-05-19',
+        start_utc: '2026-05-19T17:00:00Z',
+        end_utc: '2026-05-19T18:00:00Z',
+        duration_seconds: 3600,
+        avg_hr: 145,
+        max_hr: 180,
+        strain: 14.5,
+        calories: 620,
+        zone_seconds: JSON.stringify([300, 600, 900, 1200, 600]),
+        label: null,
+        auto_detected: true,
+      },
+    ]);
+    const blob = await exportWorkoutsCsv(db);
+    const text = await blobToText(blob);
+    const lines = text.split('\n');
+    expect(lines).toHaveLength(2); // header + 1 workout
+    expect(lines[1]).toContain('2026-05-19');
+    expect(lines[1]).toContain('60');   // duration_min = 3600 / 60
+    expect(lines[1]).toContain('145');  // avg_hr
+    expect(lines[1]).toContain('14.5'); // strain
+  });
+});
 
 describe('exportJournalCsv', () => {
   it('returns a Blob with header row when no entries', async () => {
