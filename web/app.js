@@ -201,75 +201,80 @@ function commonOpts(extra = {}) {
 
 /* ───────────────────────────── Recovery ring (SVG) ─────────────────── */
 
-function drawRecoveryRing(svg, score, big = false) {
-  const color = recoveryColor(score);
-  const size = big ? 280 : 200;
-  const cx = size / 2, cy = size / 2;
-  const r = big ? 110 : 78;
-  const stroke = big ? 22 : 16;
-  const startAngle = -225, endAngle = 45; // 270° arc
-  const total = endAngle - startAngle;
-  const pct = score == null ? 0 : Math.max(0, Math.min(100, score)) / 100;
-
-  function pt(angleDeg, radius) {
-    const a = (angleDeg * Math.PI) / 180;
-    return [cx + Math.cos(a) * radius, cy + Math.sin(a) * radius];
-  }
-  function arcPath(a0, a1, radius) {
-    const [x0, y0] = pt(a0, radius);
-    const [x1, y1] = pt(a1, radius);
-    const largeArc = (a1 - a0) > 180 ? 1 : 0;
-    return `M ${x0} ${y0} A ${radius} ${radius} 0 ${largeArc} 1 ${x1} ${y1}`;
-  }
-
-  const trackPath = arcPath(startAngle, endAngle, r);
-  const fillPath = arcPath(startAngle, startAngle + total * pct, r);
-
-  svg.setAttribute("viewBox", `0 0 ${size} ${size}`);
-  svg.innerHTML = `
-    <path d="${trackPath}" fill="none" stroke="${COLORS.border}" stroke-width="${stroke}" stroke-linecap="round" />
-    ${pct > 0 ? `<path d="${fillPath}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-linecap="round" />` : ""}
-    <text x="${cx}" y="${cy - 4}" text-anchor="middle" fill="${COLORS.fg}" style="font-size:${big ? 64 : 48}px;font-weight:600;font-family:inherit;dominant-baseline:middle;">
-      ${score == null ? "—" : Math.round(score)}
-    </text>
-    <text x="${cx}" y="${cy + (big ? 42 : 30)}" text-anchor="middle" fill="${COLORS.muted}" style="font-size:${big ? 13 : 11}px;letter-spacing:1.5px;text-transform:uppercase;">
-      Recovery
-    </text>
-  `;
-}
-
-function drawGaugeRing(svg, score, color, formatFn = (x) => Math.round(x).toString(), maxVal = 100) {
+/**
+ * Draw a thin Whoop-style ring (270° arc) into an SVG element.
+ *
+ * The ring is purely visual — numeric value and label are rendered in
+ * HTML overlay siblings so they get crisp web typography. The arc itself
+ * gets a soft glow via SVG <filter>, plus a subtle pulse animation on
+ * the head cap when the value is non-zero.
+ *
+ * @param {SVGElement} svg
+ * @param {number|null} score  value (or null for empty ring)
+ * @param {string}      color  primary stroke color (gradient endpoint)
+ * @param {number}      maxVal scale ceiling (e.g. 100 for %, 21 for strain)
+ * @param {Object}      [opts]
+ * @param {number}      [opts.stroke=18]
+ * @param {string}      [opts.colorTo] optional gradient endpoint
+ * @param {boolean}     [opts.glow=true]
+ */
+function drawRing(svg, score, color, maxVal = 100, opts = {}) {
   if (!svg) return;
-  const size = 150;
+  const stroke = opts.stroke ?? 18;
+  const colorTo = opts.colorTo ?? color;
+  const glow = opts.glow ?? true;
+
+  const size = 300;
   const cx = size / 2, cy = size / 2;
-  const r = 56;
-  const stroke = 10;
+  const r = (size - stroke) / 2 - 4;
   const startAngle = -225, endAngle = 45; // 270° arc
   const total = endAngle - startAngle;
   const pct = score == null ? 0 : Math.max(0, Math.min(maxVal, score)) / maxVal;
 
-  function pt(angleDeg, radius) {
+  const pt = (angleDeg, radius) => {
     const a = (angleDeg * Math.PI) / 180;
     return [cx + Math.cos(a) * radius, cy + Math.sin(a) * radius];
-  }
-  function arcPath(a0, a1, radius) {
+  };
+  const arcPath = (a0, a1, radius) => {
     const [x0, y0] = pt(a0, radius);
     const [x1, y1] = pt(a1, radius);
     const largeArc = (a1 - a0) > 180 ? 1 : 0;
     return `M ${x0} ${y0} A ${radius} ${radius} 0 ${largeArc} 1 ${x1} ${y1}`;
-  }
+  };
 
   const trackPath = arcPath(startAngle, endAngle, r);
-  const fillPath = arcPath(startAngle, startAngle + total * pct, r);
+  const fillEnd = startAngle + total * pct;
+  const fillPath = pct > 0 ? arcPath(startAngle, fillEnd, r) : "";
+  const [headX, headY] = pt(fillEnd, r);
+  const gid = "g" + Math.random().toString(36).slice(2, 8);
+  const fid = "f" + Math.random().toString(36).slice(2, 8);
 
   svg.setAttribute("viewBox", `0 0 ${size} ${size}`);
   svg.innerHTML = `
-    <path d="${trackPath}" fill="none" stroke="${COLORS.border}" stroke-width="${stroke}" stroke-linecap="round" opacity="0.3" />
-    ${pct > 0 ? `<path d="${fillPath}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-linecap="round" />` : ""}
-    <text x="${cx}" y="${cy}" text-anchor="middle" fill="${COLORS.fg}" style="font-size:32px;font-weight:700;font-family:inherit;dominant-baseline:central;">
-      ${score == null ? "—" : formatFn(score)}
-    </text>
+    <defs>
+      <linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%"  stop-color="${color}"/>
+        <stop offset="100%" stop-color="${colorTo}"/>
+      </linearGradient>
+      ${glow ? `<filter id="${fid}" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="6" result="blur"/>
+        <feMerge><feMerge node-in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>` : ""}
+    </defs>
+    <path d="${trackPath}" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="${stroke}" stroke-linecap="round" />
+    ${pct > 0 ? `
+      <path d="${fillPath}" fill="none" stroke="url(#${gid})" stroke-width="${stroke}" stroke-linecap="round" ${glow ? `filter="url(#${fid})"` : ""} />
+      <circle cx="${headX}" cy="${headY}" r="${stroke / 2}" fill="${colorTo}" />
+    ` : ""}
   `;
+}
+
+// Legacy wrappers kept for callers in app.js — the new HTML overlays the value separately.
+function drawRecoveryRing(svg, score /*, big = false */) {
+  drawRing(svg, score, recoveryColor(score), 100, { stroke: 20 });
+}
+function drawGaugeRing(svg, score, color /*, formatFn, maxVal=100 */, formatFn, maxVal = 100) {
+  drawRing(svg, score, color, maxVal, { stroke: 18 });
 }
 
 /* ───────────────────────────── Hypnogram (SVG) ─────────────────────── */
@@ -353,49 +358,93 @@ async function loadOverview() {
     fetchJSON("/api/today?downsample=20"),
   ]);
 
-  $("overview-date").textContent = new Date().toLocaleDateString(undefined, {
+  const today_d = new Date();
+  const dateStr = today_d.toLocaleDateString(undefined, {
     weekday: "long", month: "short", day: "numeric",
   });
+  if ($("overview-date")) $("overview-date").textContent = dateStr;
+  if ($("topbar-date"))   $("topbar-date").textContent   = `Today · ${today_d.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+  // Time-aware greeting
+  const hour = today_d.getHours();
+  const greeting = hour < 5 ? "Late night" : hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : hour < 22 ? "Good evening" : "Good night";
+  const welcomeEl = document.querySelector(".welcome-text");
+  if (welcomeEl) welcomeEl.textContent = `${greeting}, Madhur`;
 
   const m = overview.metrics || {};
   const trend7 = overview.trend7 || [];
 
-  // Sleep Ring
+  // ─── Sleep ring (blue) ─────────────────────────────────────────
   if ($("sleep-ring")) {
-    drawGaugeRing($("sleep-ring"), m.sleep_performance_pct, "#ff9f0a", (x) => Math.round(x) + "%", 100);
+    drawRing($("sleep-ring"), m.sleep_performance_pct, "#819BFF", 100, { stroke: 18, colorTo: "#4D7CFF" });
     const asleep = m.sleep_minutes || 0;
     const hours = Math.floor(asleep / 60), mins = asleep % 60;
-    $("sleep-perf").textContent = m.sleep_performance_pct != null
-      ? `${hours}h ${mins}m · ${m.sleep_performance_pct}% need`
-      : "no sleep recorded";
-  }
-
-  // Recovery Ring
-  if ($("recovery-ring")) {
-    drawGaugeRing($("recovery-ring"), m.recovery_score, recoveryColor(m.recovery_score), (x) => Math.round(x) + "%", 100);
-    if (m.recovery_score == null) {
-      $("recovery-meta").textContent = "needs overnight data";
-    } else {
-      // Compute baseline deltas from trend7 (yesterday backward).
-      const prior = trend7.slice(0, -1);
-      const hrvBase = (() => {
-        const vs = prior.map((r) => r.rmssd_ms).filter((v) => v != null);
-        return vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null;
-      })();
-      const hrvDelta = (m.rmssd_ms != null && hrvBase != null) ? m.rmssd_ms - hrvBase : null;
-      const arrow = (d) => d == null ? "" : ` ${d > 0 ? "↑" : d < 0 ? "↓" : "·"} ${d > 0 ? "+" : ""}${Math.round(d)}`;
-      $("recovery-meta").textContent =
-        `HRV ${fmtInt(m.rmssd_ms)}ms${arrow(hrvDelta)} · RHR ${fmtInt(m.resting_hr)} bpm`;
+    if ($("sleep-ring-num")) {
+      $("sleep-ring-num").textContent = m.sleep_performance_pct != null ? Math.round(m.sleep_performance_pct) : "—";
+    }
+    if ($("sleep-perf")) {
+      $("sleep-perf").textContent = m.sleep_performance_pct != null ? "of sleep need met" : "no sleep recorded";
+    }
+    if ($("sleep-ring-foot")) {
+      $("sleep-ring-foot").innerHTML = m.sleep_performance_pct != null
+        ? `<span><strong>${hours}h ${mins}m</strong> asleep</span>`
+        : `<span>Connect strap to record sleep</span>`;
     }
   }
 
-  // Strain Ring
+  // ─── Recovery ring (green/yellow/red) ──────────────────────────
+  if ($("recovery-ring")) {
+    const color = recoveryColor(m.recovery_score);
+    drawRing($("recovery-ring"), m.recovery_score, color, 100, { stroke: 22 });
+    if ($("recovery-ring-num")) {
+      $("recovery-ring-num").textContent = m.recovery_score != null ? Math.round(m.recovery_score) : "—";
+      $("recovery-ring-num").style.color = m.recovery_score == null ? "var(--text-faint)" : "var(--text)";
+    }
+    if ($("recovery-meta")) {
+      if (m.recovery_score == null) {
+        $("recovery-meta").textContent = "needs overnight data";
+      } else {
+        const labels = { good: "OPTIMAL", mid: "ADEQUATE", bad: "LOW" };
+        const tier = m.recovery_score >= 67 ? "good" : m.recovery_score >= 33 ? "mid" : "bad";
+        $("recovery-meta").textContent = labels[tier];
+        $("recovery-meta").style.color = color;
+      }
+    }
+    if ($("recovery-ring-foot")) {
+      if (m.recovery_score != null) {
+        // Compute baseline deltas from trend7 (yesterday backward).
+        const prior = trend7.slice(0, -1);
+        const hrvBase = (() => {
+          const vs = prior.map((r) => r.rmssd_ms).filter((v) => v != null);
+          return vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null;
+        })();
+        const hrvDelta = (m.rmssd_ms != null && hrvBase != null) ? m.rmssd_ms - hrvBase : null;
+        const arrow = (d) => d == null ? "" : `<span style="color:${d > 0 ? "var(--recovery)" : "var(--bad)"}">${d > 0 ? "↑" : d < 0 ? "↓" : "·"} ${d > 0 ? "+" : ""}${Math.round(d)}</span>`;
+        $("recovery-ring-foot").innerHTML =
+          `<span>HRV <strong>${fmtInt(m.rmssd_ms)} ms</strong> ${arrow(hrvDelta)}</span><span>RHR <strong>${fmtInt(m.resting_hr)} bpm</strong></span>`;
+      } else {
+        $("recovery-ring-foot").innerHTML = `<span>Wear your strap overnight to compute recovery</span>`;
+      }
+    }
+  }
+
+  // ─── Strain ring (cyan) ────────────────────────────────────────
   if ($("strain-ring")) {
     const strain = m.strain_score ?? 0;
-    drawGaugeRing($("strain-ring"), m.strain_score, "#0a84ff", (x) => (x ?? 0).toFixed(1), 21);
-    $("strain-meta").textContent = m.strain_score == null
-      ? "no activity yet"
-      : `${strainLabel(strain)} · ${fmtInt(m.calories)} kcal`;
+    drawRing($("strain-ring"), m.strain_score, "#03B5F3", 21, { stroke: 18, colorTo: "#00D4FF" });
+    if ($("strain-ring-num")) {
+      $("strain-ring-num").textContent = m.strain_score != null ? strain.toFixed(1) : "—";
+    }
+    if ($("strain-meta")) {
+      $("strain-meta").textContent = m.strain_score == null
+        ? "no activity yet"
+        : `${strainLabel(strain).toUpperCase()}`;
+      $("strain-meta").style.color = "var(--strain)";
+    }
+    if ($("strain-ring-foot")) {
+      $("strain-ring-foot").innerHTML = m.strain_score != null
+        ? `<span><strong>${fmtInt(m.calories)}</strong> kcal burned</span><span>scale 0–21</span>`
+        : `<span>Start moving — strain will update through the day</span>`;
+    }
   }
 
   // Now card
@@ -570,10 +619,20 @@ async function loadRecovery() {
 
   const m = data.summary || {};
   const noData = data.summary == null;
-  drawRecoveryRing($("recovery-ring-big"), m.recovery_score, true);
-  $("recovery-state-big").textContent = noData ? "No data for this date" : recoveryLabel(m.recovery_score);
+  const recColor = recoveryColor(m.recovery_score);
+  drawRing($("recovery-ring-big"), m.recovery_score, recColor, 100, { stroke: 26 });
+  if ($("recovery-ring-big-num")) {
+    $("recovery-ring-big-num").innerHTML = (m.recovery_score != null)
+      ? `${Math.round(m.recovery_score)}<span class="unit">%</span>`
+      : `—<span class="unit">%</span>`;
+    $("recovery-ring-big-num").style.color = m.recovery_score != null ? "var(--text)" : "var(--text-faint)";
+  }
+  if ($("recovery-state-big")) {
+    $("recovery-state-big").textContent = noData ? "No data yet" : recoveryLabel(m.recovery_score).toUpperCase();
+    $("recovery-state-big").style.color = noData ? "var(--text-faint)" : recColor;
+  }
   if ($("recovery-coach")) {
-    const coach = noData ? "" : (recoveryCoach(m.recovery_score) ?? "");
+    const coach = noData ? "Wear your strap overnight to compute recovery." : (recoveryCoach(m.recovery_score) ?? "");
     $("recovery-coach").textContent = coach;
   }
 

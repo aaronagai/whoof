@@ -11,20 +11,41 @@
 <meta name="apple-mobile-web-app-title" content="Vitality" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
 <aside class="sidebar">
-  <div class="brand">MS <span class="brand-accent">VITALITY</span></div>
+  <div class="brand">
+    <span class="brand-mark"></span>
+    <span class="brand-accent">whoopfree</span>
+  </div>
 
   <nav class="tabs">
-    <button class="tab" data-tab="overview" data-icon="◐">Overview</button>
-    <button class="tab" data-tab="recovery" data-icon="●">Recovery</button>
-    <button class="tab" data-tab="sleep" data-icon="☾">Sleep</button>
-    <button class="tab" data-tab="strain" data-icon="↟">Strain</button>
-    <button class="tab" data-tab="trends" data-icon="∿">Trends</button>
-    <button class="tab" data-tab="live" data-icon="●">Live</button>
+    <button class="tab" data-tab="overview">
+      <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span>
+      Overview
+    </button>
+    <button class="tab" data-tab="recovery">
+      <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg></span>
+      Recovery
+    </button>
+    <button class="tab" data-tab="sleep">
+      <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></span>
+      Sleep
+    </button>
+    <button class="tab" data-tab="strain">
+      <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg></span>
+      Strain
+    </button>
+    <button class="tab" data-tab="trends">
+      <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg></span>
+      Trends
+    </button>
+    <button class="tab" data-tab="live">
+      <span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M5 12a7 7 0 0 1 14 0M2 12a10 10 0 0 1 20 0"/></svg></span>
+      Live
+    </button>
   </nav>
 
   <!-- BLE connection card inside sidebar -->
@@ -173,23 +194,21 @@
 </aside>
 
 <main class="content">
-  <!-- Persistent top bar matching premium design -->
+  <!-- Top bar -->
   <header class="top-bar">
     <div class="top-bar-left">
-      <div class="location-badge">
-        <span class="pin-icon">📍</span> Seattle, United States
-      </div>
+      <div class="date-pill"><span class="dot"></span><span id="topbar-date">Today</span></div>
     </div>
     <div class="top-bar-right">
-      <div class="notification-badge">
-        <span class="bell-icon">🔔</span>
-        <span class="badge-count">2</span>
-      </div>
+      <button class="icon-btn" title="Notifications">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
+        <span class="badge-count" id="topbar-insight-count">0</span>
+      </button>
       <div class="user-profile">
         <div class="avatar">MS</div>
         <div class="user-info">
-          <div class="user-name">Madhur Satija <span class="chevron">▼</span></div>
-          <div class="user-email">madhur@satija.com</div>
+          <div class="user-name">Madhur <span class="chevron">▾</span></div>
+          <div class="user-email">whoopfree</div>
         </div>
       </div>
     </div>
@@ -199,65 +218,102 @@
   <section class="tab-panel" data-panel="overview">
     <header class="panel-header">
       <div>
-        <h1 class="welcome-text">Health Overview</h1>
-        <div class="panel-subtitle">Sleep, recovery, strain — and what to do about them today</div>
+        <h1 class="welcome-text">Good morning, Madhur</h1>
+        <div class="panel-subtitle">Your body's signals, all in one place.</div>
       </div>
       <span class="panel-date" id="overview-date"></span>
     </header>
-    <div class="grid grid-overview">
-      <div class="card card-sleep">
-        <div class="card-eyebrow">Sleep</div>
-        <div class="ring-wrap"><svg id="sleep-ring" viewBox="0 0 150 150"></svg></div>
-        <div class="card-meta-label" id="sleep-perf">—</div>
-        <canvas id="sleep-sparkline" height="28" style="width:100%; margin-top:4px; display:block;"></canvas>
+
+    <!-- Hero ring trio (Whoop signature) -->
+    <div class="hero-ring-row">
+      <div class="ring-card sleep">
+        <div class="ring-eyebrow">Sleep performance</div>
+        <div class="ring-wrap"><svg id="sleep-ring" viewBox="0 0 300 300"></svg>
+          <div class="ring-value">
+            <div class="num"><span id="sleep-ring-num">—</span><span class="unit">%</span></div>
+            <div class="sub" id="sleep-perf">— need fulfillment</div>
+          </div>
+        </div>
+        <div class="ring-foot" id="sleep-ring-foot"></div>
+        <canvas id="sleep-sparkline" class="spark"></canvas>
       </div>
 
-      <div class="card card-recovery">
-        <div class="card-eyebrow">Recovery</div>
-        <div class="ring-wrap"><svg id="recovery-ring" viewBox="0 0 150 150"></svg></div>
-        <div class="card-meta-label" id="recovery-meta">—</div>
-        <canvas id="recovery-sparkline" height="28" style="width:100%; margin-top:4px; display:block;"></canvas>
+      <div class="ring-card recovery">
+        <div class="ring-eyebrow">Recovery</div>
+        <div class="ring-wrap"><svg id="recovery-ring" viewBox="0 0 300 300"></svg>
+          <div class="ring-value">
+            <div class="num big"><span id="recovery-ring-num">—</span><span class="unit">%</span></div>
+            <div class="sub" id="recovery-meta">—</div>
+          </div>
+        </div>
+        <div class="ring-foot" id="recovery-ring-foot"></div>
+        <canvas id="recovery-sparkline" class="spark"></canvas>
       </div>
 
-      <div class="card card-strain">
-        <div class="card-eyebrow">Day Strain</div>
-        <div class="ring-wrap"><svg id="strain-ring" viewBox="0 0 150 150"></svg></div>
-        <div class="card-meta-label" id="strain-meta">—</div>
-        <canvas id="strain-sparkline" height="28" style="width:100%; margin-top:4px; display:block;"></canvas>
+      <div class="ring-card strain">
+        <div class="ring-eyebrow">Day strain</div>
+        <div class="ring-wrap"><svg id="strain-ring" viewBox="0 0 300 300"></svg>
+          <div class="ring-value">
+            <div class="num"><span id="strain-ring-num">—</span></div>
+            <div class="sub" id="strain-meta">— · 0 kcal</div>
+          </div>
+        </div>
+        <div class="ring-foot" id="strain-ring-foot"></div>
+        <canvas id="strain-sparkline" class="spark"></canvas>
       </div>
+    </div>
 
-      <div class="card card-current">
-        <div class="card-eyebrow">Now</div>
-        <div class="now-hr"><span id="now-hr">—</span><span class="unit">bpm</span></div>
-        <div class="now-grid">
+    <!-- "My Day" section -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin: 32px 0 16px 0;">
+      <h2>My day</h2>
+      <span class="eyebrow">live · biometrics</span>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <span class="card-eyebrow">Live heart rate</span>
+        <div class="now-tile">
+          <div class="now-hr">
+            <span id="now-hr">—</span><span class="unit">bpm</span>
+            <span class="heart-pulse">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg>
+            </span>
+          </div>
+        </div>
+        <div class="now-grid" style="margin-top:14px;">
           <div><span class="lbl">SpO₂</span><span id="now-spo2">—</span></div>
-          <div><span class="lbl">Skin</span><span id="now-temp">—</span></div>
+          <div><span class="lbl">Skin temp</span><span id="now-temp">—</span></div>
           <div><span class="lbl">Battery</span><span id="now-battery">—</span></div>
-          <div><span class="lbl">Ago</span><span id="now-ago">—</span></div>
+          <div><span class="lbl">Updated</span><span id="now-ago">—</span></div>
         </div>
       </div>
 
-      <div class="card card-workouts span-2">
-        <div class="card-eyebrow">Recent activity</div>
-        <div class="workout-list" id="overview-workouts"></div>
-      </div>
-
       <div class="card card-plan span-2" id="plan-card">
-        <div class="card-eyebrow">Today's plan</div>
-        <div id="plan-zone" style="font-size:28px; margin:6px 0 2px 0;">—</div>
-        <div id="plan-label" style="font-size:16px; font-weight:700; color:var(--fg); margin-bottom:4px;">—</div>
-        <div id="plan-message" style="font-size:11px; color:var(--muted); line-height:1.5; white-space:pre-line;">Connect your Whoop to see today's recommendation.</div>
-        <div id="plan-target" style="font-size:10px; color:var(--muted); margin-top:6px;"></div>
+        <span class="card-eyebrow">Today's plan</span>
+        <div class="plan-illust" id="plan-zone">🛌</div>
+        <div id="plan-label">—</div>
+        <div id="plan-message">Connect your strap to see today's personalised recommendation.</div>
+        <div id="plan-target"></div>
       </div>
 
-      <div class="card card-insights span-2" id="insights-card" style="display:none;">
-        <div class="card-eyebrow">Health insights</div>
-        <div id="insights-list" style="display:flex; flex-direction:column; gap:8px; margin-top:4px;"></div>
+      <div class="card card-insights" id="insights-card" style="display:none;">
+        <span class="card-eyebrow">Insights</span>
+        <div id="insights-list" style="display:flex; flex-direction:column; gap:8px; margin-top:6px;"></div>
       </div>
 
-      <div class="card card-bigchart span-4">
-        <div class="card-eyebrow">Heart rate · today</div>
-        <div class="chart-wrap"><canvas id="hr-today"></canvas></div>
+      <div class="card span-2">
+        <span class="card-eyebrow">Recent activity</span>
+        <div class="workout-list" id="overview-workouts">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18 L 10 14 L 14 17 L 19 8"/><circle cx="6" cy="18" r="1.5" fill="currentColor"/><circle cx="10" cy="14" r="1.5" fill="currentColor"/><circle cx="14" cy="17" r="1.5" fill="currentColor"/><circle cx="19" cy="8" r="1.5" fill="currentColor"/></svg>
+            No workouts detected yet.
+          </div>
+        </div>
+      </div>
+
+      <div class="card span-4">
+        <span class="card-eyebrow">Heart rate · today</span>
+        <div class="chart-wrap tall"><canvas id="hr-today"></canvas></div>
       </div>
 
       <div class="card span-4" id="journal-card">
@@ -300,16 +356,21 @@
       </div>
       <span class="panel-date" id="recovery-date"></span>
     </header>
-    <div class="grid grid-recovery">
-      <div class="card span-2">
-        <div class="card-eyebrow">This morning</div>
-        <div class="ring-wrap big"><svg id="recovery-ring-big" viewBox="0 0 280 280"></svg></div>
-        <div class="recovery-state large" id="recovery-state-big">—</div>
-        <div id="recovery-coach" style="font-size:12px; color:var(--muted); margin-top:6px; line-height:1.5; min-height:1.2em;"></div>
+    <div class="grid">
+      <div class="ring-card recovery span-2" style="display:flex; flex-direction:column;">
+        <div class="ring-eyebrow">This morning</div>
+        <div class="ring-wrap big" style="margin: 18px auto;">
+          <svg id="recovery-ring-big" viewBox="0 0 300 300"></svg>
+          <div class="ring-value">
+            <div class="num big" id="recovery-ring-big-num">—<span class="unit">%</span></div>
+            <div class="sub" id="recovery-state-big">No data yet</div>
+          </div>
+        </div>
+        <div id="recovery-coach" style="font-size:13px; color:var(--text-2); text-align:center; line-height:1.55; min-height:1.4em; max-width:340px; margin:6px auto 0 auto;"></div>
       </div>
       <div class="card span-2">
-        <div class="card-eyebrow">Components</div>
-        <div class="components" id="recovery-components"></div>
+        <span class="card-eyebrow">What drove recovery</span>
+        <div class="components" id="recovery-components" style="margin-top:14px;"></div>
       </div>
       <div class="card span-2">
         <div class="card-eyebrow">Recovery score · 30 days</div>
@@ -344,27 +405,27 @@
       </div>
       <span class="panel-date" id="sleep-date"></span>
     </header>
-    <div class="grid grid-sleep">
-      <div class="card card-sleep span-4">
-        <div class="card-eyebrow">Hypnogram · last night</div>
-        <div class="hypnogram-wrap"><svg id="hypnogram" viewBox="0 0 1000 220"></svg></div>
+    <div class="grid">
+      <div class="card span-4">
+        <span class="card-eyebrow">Hypnogram · last night</span>
+        <div class="hypnogram-wrap" style="margin-top:14px;"><svg id="hypnogram" viewBox="0 0 1000 220"></svg></div>
         <div class="legend" id="hypnogram-legend"></div>
       </div>
 
-      <div class="card card-sleep">
-        <div class="card-eyebrow">Asleep</div>
-        <div class="big-num" id="sleep-total"></div>
+      <div class="card">
+        <span class="card-eyebrow">Asleep</span>
+        <div class="big-num" id="sleep-total" style="font-size:42px; margin-top:10px;"></div>
       </div>
-      <div class="card card-sleep">
-        <div class="card-eyebrow">Performance</div>
-        <div class="big-num"><span id="sleep-performance">—</span><span class="unit">%</span></div>
-        <div class="muted" id="sleep-need-line"></div>
+      <div class="card">
+        <span class="card-eyebrow">Performance</span>
+        <div class="big-num" style="font-size:42px; margin-top:10px;"><span id="sleep-performance">—</span><span class="unit">%</span></div>
+        <div class="muted" id="sleep-need-line" style="margin-top:4px;"></div>
       </div>
-      <div class="card card-sleep span-2" id="sleep-quality-card">
-        <div class="card-eyebrow" title="Composite of performance, efficiency, restorative ratio, consistency, and debt">Quality score</div>
-        <div style="display:flex; align-items:center; gap:14px;">
-          <div class="big-num" style="font-size:42px;"><span id="sleep-quality">—</span><span class="unit">/100</span></div>
-          <div id="sleep-quality-breakdown" style="flex:1; display:grid; grid-template-columns:1fr auto; gap:2px 8px; font-size:10px; color:var(--muted);"></div>
+      <div class="card span-2" id="sleep-quality-card">
+        <span class="card-eyebrow" title="Composite of performance, efficiency, restorative ratio, consistency, and debt">Quality score</span>
+        <div style="display:flex; align-items:center; gap:18px; margin-top:8px;">
+          <div class="big-num" style="font-size:48px;"><span id="sleep-quality">—</span><span class="unit">/100</span></div>
+          <div id="sleep-quality-breakdown" style="flex:1; display:grid; grid-template-columns:1fr auto; gap:4px 14px; font-size:11px; color:var(--text-muted);"></div>
         </div>
       </div>
       <div class="card card-sleep">
@@ -420,7 +481,7 @@
       </div>
       <span class="panel-date" id="strain-date"></span>
     </header>
-    <div class="grid grid-strain">
+    <div class="grid">
       <div class="card">
         <div class="card-eyebrow">Day strain</div>
         <div class="big-num"><span id="strain-big">—</span><span class="unit">/21</span></div>
@@ -492,7 +553,7 @@
         </select>
       </div>
     </header>
-    <div class="grid grid-trends">
+    <div class="grid">
       <div class="card span-4" id="weekly-summary-card">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
           <div class="card-eyebrow">7-day summary</div>

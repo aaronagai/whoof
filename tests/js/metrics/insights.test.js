@@ -15,6 +15,9 @@ function makeMetrics(overrides = []) {
     recovery_score: 65,
     strain_score: 10,
     sleep_minutes: 450,
+    deep_sleep_minutes: 95,   // ~21% — healthy
+    rem_sleep_minutes: 108,   // ~24% — healthy
+    light_sleep_minutes: 247, // ~55%
     sleep_debt_minutes: 0,
     sleep_consistency_pct: 85,
     respiratory_rate: 14,
