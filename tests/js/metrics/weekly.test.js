@@ -100,3 +100,31 @@ describe('weeklySummary', () => {
     expect(s.summary).toContain('recovery');
   });
 });
+
+  it('aggregates zone_minutes across all days', () => {
+    const makeRow = (zones) => ({
+      recovery_score: 65, rmssd_ms: 55, resting_hr: 50, strain_score: 12,
+      sleep_minutes: 450, calories: 600, zone_minutes: zones,
+    });
+    const metrics = [
+      makeRow([30, 45, 20, 10, 5]),
+      makeRow([20, 40, 15, 8, 2]),
+      makeRow([25, 50, 10, 5, 0]),
+      makeRow([10, 30, 12, 6, 0]),
+      makeRow([15, 35, 18, 9, 3]),
+      makeRow([20, 42, 22, 11, 4]),
+      makeRow([18, 38, 16, 7, 1]),
+    ];
+    const s = weeklySummary(metrics);
+    expect(s.hasZoneData).toBe(true);
+    expect(s.zoneSum[0]).toBe(30 + 20 + 25 + 10 + 15 + 20 + 18); // Z1 sum = 138
+    expect(s.zoneSum[4]).toBe(5 + 2 + 0 + 0 + 3 + 4 + 1);         // Z5 sum = 15
+    expect(s.summary).toMatch(/Week zones/);
+  });
+
+  it('skips zone line when no zone data', () => {
+    const metrics = makeMetrics(Array(7).fill({})); // no zone_minutes field
+    const s = weeklySummary(metrics);
+    expect(s.hasZoneData).toBe(false);
+    expect(s.summary).not.toMatch(/Week zones/);
+  });
