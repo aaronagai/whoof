@@ -1349,6 +1349,28 @@ async function renderWeeklySummary() {
     const s = weeklySummary(metrics);
     let text = s.summary;
 
+    // Week-over-week delta lines (requires at least 7 prior days).
+    const prevMetrics = allMetrics.slice(7, 14); // days 8-14
+    if (prevMetrics.length >= 4) {
+      const p = weeklySummary(prevMetrics);
+      const deltas = [];
+      const fmt = (val, prev, unit, higherIsBetter = true) => {
+        if (val == null || prev == null) return null;
+        const d = val - prev;
+        if (Math.abs(d) < 0.5) return null; // insignificant
+        const arrow = d > 0 ? '↑' : '↓';
+        const good = (higherIsBetter ? d > 0 : d < 0);
+        const sign = d > 0 ? '+' : '';
+        return `${good ? '✅' : '⚠️'} ${arrow} ${sign}${d.toFixed(unit === 'bpm' ? 0 : 1)}${unit}`;
+      };
+      const recovery = fmt(s.avgRecovery, p.avgRecovery, '% recovery');
+      const hrv      = fmt(s.avgRmssd,    p.avgRmssd,    'ms HRV');
+      const rhr      = fmt(s.avgRhr,      p.avgRhr,      'bpm RHR', false);
+      const sleep    = fmt(s.avgSleepH,   p.avgSleepH,   'h sleep');
+      [recovery, hrv, rhr, sleep].filter(Boolean).forEach((l) => deltas.push(l));
+      if (deltas.length) text += '\n\n📊 vs last week\n' + deltas.join('\n');
+    }
+
     // Append top correlation insights if available.
     const corr = analyseTagCorrelations(journalEntries, allMetrics);
     const ins = tagInsights(corr);
