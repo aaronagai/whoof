@@ -1145,6 +1145,9 @@ async function renderPoincareePlot() {
 
 // Render on data change and when recovery tab becomes active.
 window.addEventListener('whoop-data-changed', () => renderPoincareePlot());
+window.addEventListener('whoop-tab-recovery', () => renderPoincareePlot());
+// Make available to other modules (e.g. app.js Recovery tab loader)
+window.renderPoincareePlot = renderPoincareePlot;
 window.addEventListener('hashchange', () => {
   if (location.hash === '#recovery') renderPoincareePlot();
 });

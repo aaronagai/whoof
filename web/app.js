@@ -649,6 +649,9 @@ async function loadRecovery() {
     }] },
     options: commonOpts(),
   });
+
+  // Poincaré plot is rendered by app-mvp.js — notify it to refresh.
+  window.dispatchEvent(new CustomEvent("whoop-tab-recovery"));
 }
 
 /* ───────────────────────────── Sleep tab ───────────────────────────── */
