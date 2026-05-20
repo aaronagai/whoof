@@ -250,3 +250,11 @@ export async function recentJournalEntries(db, days = 30) {
   const all = await req2promise(tx.objectStore('journal').getAll());
   return all.sort((a, b) => (a.date > b.date ? -1 : 1)).slice(0, days);
 }
+
+export async function deleteJournalEntry(db, dateIso) {
+  const tx = db.transaction('journal', 'readwrite');
+  const store = tx.objectStore('journal');
+  const keys = await req2promise(store.index('date').getAllKeys(dateIso));
+  for (const k of keys) store.delete(k);
+  await txDone(tx);
+}

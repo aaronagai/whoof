@@ -25,7 +25,7 @@ import {
 import { generateInsights } from './metrics/insights.js';
 import { dailyPlan } from './metrics/plan.js';
 import { weeklySummary } from './metrics/weekly.js';
-import { recentDailyMetrics, samplesInRange, upsertJournalEntry, recentJournalEntries, journalForDate } from './data/queries.js';
+import { recentDailyMetrics, samplesInRange, upsertJournalEntry, recentJournalEntries, journalForDate, deleteJournalEntry } from './data/queries.js';
 import {
   notificationsEnabled, requestNotifications, disableNotifications,
   notifyBackfillComplete, notifyLowRecovery, notifyLowBattery, notifyHrAnomaly,
@@ -1153,14 +1153,52 @@ window.addEventListener('hashchange', () => {
 
 let _selectedTags = new Set();
 
+/** Return today as YYYY-MM-DD in local time. */
+function localToday() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Load an existing journal entry for `date` into the form fields. */
+async function loadJournalEntry(date) {
+  const tagContainer = document.getElementById('journal-tags');
+  const textarea = document.getElementById('journal-text');
+  if (!tagContainer || !textarea) return;
+  _selectedTags.clear();
+  tagContainer.querySelectorAll('.journal-tag').forEach((b) => b.classList.remove('active'));
+  textarea.value = '';
+  try {
+    if (!db) db = await openDb();
+    const entry = await journalForDate(db, date);
+    if (entry) {
+      textarea.value = entry.text ?? '';
+      for (const tag of (entry.tags ?? [])) {
+        _selectedTags.add(tag);
+        const btn = tagContainer.querySelector(`[data-tag="${tag}"]`);
+        if (btn) btn.classList.add('active');
+      }
+    }
+  } catch {}
+}
+
 function wireJournal() {
   const tagContainer = document.getElementById('journal-tags');
   const textarea = document.getElementById('journal-text');
   const saveBtn = document.getElementById('journal-save');
   const statusEl = document.getElementById('journal-status');
-  const histEl = document.getElementById('journal-history');
+  const dateInput = document.getElementById('journal-date');
 
   if (!tagContainer || !textarea || !saveBtn) return;
+
+  // Initialise date picker to today.
+  if (dateInput) {
+    dateInput.value = localToday();
+    dateInput.max   = localToday();
+    // When the user changes the date, pre-fill from any existing entry.
+    dateInput.addEventListener('change', async () => {
+      await loadJournalEntry(dateInput.value);
+    });
+  }
 
   // Toggle tag selection styling.
   tagContainer.addEventListener('click', (e) => {
@@ -1186,13 +1224,14 @@ function wireJournal() {
     saveBtn.disabled = true;
     try {
       if (!db) db = await openDb();
-      const today = new Date();
-      const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const date = dateInput ? dateInput.value : localToday();
       await upsertJournalEntry(db, { date, text, tags });
       if (statusEl) statusEl.textContent = 'Saved!';
       textarea.value = '';
       _selectedTags.clear();
       tagContainer.querySelectorAll('.journal-tag').forEach((b) => b.classList.remove('active'));
+      // Reset date picker back to today after saving a past entry.
+      if (dateInput) dateInput.value = localToday();
       await renderJournalHistory(); // also re-renders tag correlations
     } catch (err) {
       if (statusEl) statusEl.textContent = 'Save failed: ' + (err.message ?? err);
@@ -1201,25 +1240,15 @@ function wireJournal() {
     setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
   });
 
-  // Load today's existing entry if any.
+  // Load today's existing entry on init.
   (async () => {
-    try {
-      if (!db) db = await openDb();
-      const today = new Date();
-      const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      const entry = await journalForDate(db, date);
-      if (entry) {
-        textarea.value = entry.text ?? '';
-        for (const tag of (entry.tags ?? [])) {
-          _selectedTags.add(tag);
-          const btn = tagContainer.querySelector(`[data-tag="${tag}"]`);
-          if (btn) btn.classList.add('active');
-        }
-      }
-    } catch {}
+    await loadJournalEntry(localToday());
     await renderJournalHistory();
   })();
 }
+
+/** Tag emoji map used in both history rendering and elsewhere. */
+const TAG_ICONS = { alcohol: '🍺', illness: '🤒', stress: '😰', travel: '✈️', race: '🏆', goodsleep: '💤', hardworkout: '💪', caffeine: '☕', meditation: '🧘', cold: '🧊', nap: '😴' };
 
 async function renderJournalHistory() {
   const histEl = document.getElementById('journal-history');
@@ -1233,16 +1262,29 @@ async function renderJournalHistory() {
       histEl.innerHTML = entries.map((e) => {
         const d = new Date(e.date + 'T12:00:00');
         const dateStr = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-        const tagsStr = (e.tags ?? []).map((t) => {
-          const icons = { alcohol: '🍺', illness: '🤒', stress: '😰', travel: '✈️', race: '🏆', goodsleep: '💤', hardworkout: '💪', caffeine: '☕', meditation: '🧘', cold: '🧊', nap: '😴' };
-          return icons[t] ?? t;
-        }).join(' ');
-        return `<div style="padding:3px 0; border-top:1px solid var(--border);">
-          <span style="color:var(--fg); font-size:11px;">${dateStr}</span>
-          ${tagsStr ? `<span style="margin-left:4px;">${tagsStr}</span>` : ''}
-          ${e.text ? `<span style="color:var(--muted); margin-left:4px; font-size:10px;">${escapeHtml(e.text.slice(0, 80))}${e.text.length > 80 ? '…' : ''}</span>` : ''}
+        const tagsStr = (e.tags ?? []).map((t) => TAG_ICONS[t] ?? t).join(' ');
+        return `<div style="display:flex; align-items:baseline; padding:3px 0; border-top:1px solid var(--border);" data-journal-date="${e.date}">
+          <span style="color:var(--fg); font-size:11px; flex-shrink:0;">${dateStr}</span>
+          ${tagsStr ? `<span style="margin-left:4px; flex-shrink:0;">${tagsStr}</span>` : ''}
+          ${e.text ? `<span style="color:var(--muted); margin-left:4px; font-size:10px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(e.text.slice(0, 80))}${e.text.length > 80 ? '…' : ''}</span>` : '<span style="flex:1;"></span>'}
+          <button class="journal-delete-btn" data-date="${e.date}" title="Delete entry" style="margin-left:6px; background:none; border:none; color:var(--muted); cursor:pointer; font-size:13px; padding:0 2px; line-height:1; flex-shrink:0;">×</button>
         </div>`;
       }).join('');
+
+      // Wire delete buttons.
+      histEl.querySelectorAll('.journal-delete-btn').forEach((btn) => {
+        btn.addEventListener('click', async (ev) => {
+          ev.stopPropagation();
+          const date = btn.dataset.date;
+          try {
+            if (!db) db = await openDb();
+            await deleteJournalEntry(db, date);
+            await renderJournalHistory();
+          } catch (err) {
+            console.warn('[journal] delete failed', err);
+          }
+        });
+      });
     }
   } catch (err) {
     console.warn('[journal] history failed', err);

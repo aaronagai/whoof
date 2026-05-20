@@ -467,13 +467,24 @@ async function loadRecovery() {
     const pct = Math.abs(delta / m.hrv_baseline_ms * 100).toFixed(0);
     const sign = delta >= 0 ? "+" : "−";
     const color = delta >= 0 ? COLORS.recGood : COLORS.recBad;
-    hrvTagLine = `<div style="font-size:10px;color:var(--muted);margin-bottom:8px;">
+    hrvTagLine = `<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">
       HRV today <strong style="color:var(--fg)">${m.rmssd_ms.toFixed(0)} ms</strong>
       vs. 14-day baseline <strong style="color:var(--fg)">${m.hrv_baseline_ms.toFixed(0)} ms</strong>
       <span style="color:${color}">(${sign}${pct}%)</span>
     </div>`;
   }
-  $("recovery-components").innerHTML = hrvTagLine + comps.map((c) => `
+  // Skin temp baseline tag line (today vs. 14-day baseline)
+  let skinTagLine = "";
+  if (m.avg_skin_temp_c != null && m.skin_temp_deviation_c != null) {
+    const dev = m.skin_temp_deviation_c;
+    const sign = dev >= 0 ? "+" : "−";
+    const color = Math.abs(dev) > 0.5 ? (dev > 0 ? COLORS.recMid : COLORS.strain) : COLORS.muted;
+    skinTagLine = `<div style="font-size:10px;color:var(--muted);margin-bottom:8px;">
+      Skin temp <strong style="color:var(--fg)">${m.avg_skin_temp_c.toFixed(1)}°C</strong>
+      (<span style="color:${color}">${sign}${Math.abs(dev).toFixed(2)}°C vs. baseline</span>)
+    </div>`;
+  }
+  $("recovery-components").innerHTML = hrvTagLine + skinTagLine + comps.map((c) => `
     <div class="component-row">
       <div class="name">${c.name}</div>
       <div class="barwrap"><div class="bar" style="width:${c.v == null ? 0 : Math.max(0, Math.min(100, c.v))}%;background:${recoveryColor(c.v)}"></div></div>

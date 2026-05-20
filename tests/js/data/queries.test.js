@@ -6,6 +6,7 @@ import {
   logEvent, recentEvents,
   getProfile, putProfile,
   upsertDailyMetric, getDailyMetric, recentDailyMetrics,
+  upsertJournalEntry, journalForDate, recentJournalEntries, deleteJournalEntry,
 } from '../../../web/js/data/queries.js';
 
 const TEST_DB = 'whoopfree-queries-test';
@@ -103,6 +104,42 @@ describe('profile', () => {
     expect(p.age).toBe(30);
     expect(p.sex).toBe('M');
     expect(p.id).toBe(1);
+  });
+});
+
+describe('journal', () => {
+  it('upsertJournalEntry + journalForDate round-trip', async () => {
+    await upsertJournalEntry(db, { date: '2026-05-20', text: 'Hard run', tags: ['hardworkout'] });
+    const e = await journalForDate(db, '2026-05-20');
+    expect(e.text).toBe('Hard run');
+    expect(e.tags).toEqual(['hardworkout']);
+  });
+
+  it('upsert replaces existing entry for same date', async () => {
+    await upsertJournalEntry(db, { date: '2026-05-20', text: 'First', tags: [] });
+    await upsertJournalEntry(db, { date: '2026-05-20', text: 'Second', tags: ['stress'] });
+    const all = await recentJournalEntries(db, 10);
+    expect(all).toHaveLength(1);
+    expect(all[0].text).toBe('Second');
+  });
+
+  it('recentJournalEntries returns newest-first', async () => {
+    await upsertJournalEntry(db, { date: '2026-05-18', text: 'older', tags: [] });
+    await upsertJournalEntry(db, { date: '2026-05-20', text: 'newer', tags: [] });
+    const rows = await recentJournalEntries(db, 10);
+    expect(rows[0].date).toBe('2026-05-20');
+    expect(rows[1].date).toBe('2026-05-18');
+  });
+
+  it('deleteJournalEntry removes the entry', async () => {
+    await upsertJournalEntry(db, { date: '2026-05-19', text: 'to delete', tags: ['alcohol'] });
+    await deleteJournalEntry(db, '2026-05-19');
+    const e = await journalForDate(db, '2026-05-19');
+    expect(e).toBeNull();
+  });
+
+  it('deleteJournalEntry on missing date is a no-op', async () => {
+    await expect(deleteJournalEntry(db, '2026-01-01')).resolves.toBeUndefined();
   });
 });
 
