@@ -241,7 +241,14 @@ export async function seedDemoData({
     if (offset % 2 === 0) tags.push('hardworkout');
     if (offset % 5 === 0) tags.push('goodsleep');
     if (!tags.length) continue;
-    await upsertJournalEntry(db, { date: dateIso, text: '', tags });
+    // Add a short realistic note for variety in the journal history.
+    const notesByTag = {
+      alcohol: ['Had a couple drinks at dinner', 'Late night out', 'Glass of wine'],
+      hardworkout: ['5 km tempo run', 'HIIT session', 'Heavy lifting + conditioning'],
+      goodsleep: ['Lights out early, felt great', 'No alarm, woke naturally'],
+    };
+    const note = notesByTag[tags[0]][offset % notesByTag[tags[0]].length] ?? '';
+    await upsertJournalEntry(db, { date: dateIso, text: note, tags });
   }
 
   // Compute daily metrics for the seeded range.
