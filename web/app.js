@@ -1178,6 +1178,26 @@ function initTrendsControls() {
     $(id).addEventListener("change", () => loadTrends().catch((e) => setStatus("error: " + e.message))));
   const btn = $("export-csv");
   if (btn) btn.addEventListener("click", () => exportDailyMetricsCsv().catch((e) => setStatus("export failed: " + e.message)));
+
+  // Copy weekly summary text to clipboard
+  const copyBtn = $("copy-weekly");
+  if (copyBtn) {
+    copyBtn.addEventListener("click", async () => {
+      const text = $("weekly-summary-text")?.textContent?.trim();
+      if (!text || text === "Loading…") {
+        setStatus("nothing to copy yet");
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        const original = copyBtn.textContent;
+        copyBtn.textContent = "✓ Copied";
+        setTimeout(() => { copyBtn.textContent = original; }, 1500);
+      } catch (e) {
+        setStatus("clipboard failed: " + e.message);
+      }
+    });
+  }
 }
 
 /**
