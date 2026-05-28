@@ -65,7 +65,7 @@ function setStatus(state) {
   connectBtn.style.display    = (state === 'disconnected') ? 'block' : 'none';
   disconnectBtn.style.display = (state === 'connected')    ? 'block' : 'none';
   // Connection-dependent sub-panels
-  for (const id of ['mvp-sync-now', 'mvp-capture', 'mvp-diag-details', 'mvp-log-details', 'mvp-stats', 'mvp-alarm-details']) {
+  for (const id of ['mvp-sync-now', 'mvp-capture', 'mvp-diag-details', 'mvp-log-details', 'mvp-stats']) {
     const el = $(id);
     if (el) el.style.display = (state === 'connected') ? '' : 'none';
   }
@@ -534,43 +534,6 @@ function wireDiagnostics() {
   }));
 }
 wireDiagnostics();
-
-// ----- Smart alarm ---------------------------------------------------------
-
-function wireAlarm() {
-  const timeInput = $('alarm-time');
-  const setBtn = $('alarm-set');
-  const offBtn = $('alarm-disable');
-  const runBtn = $('alarm-run');
-  const statusEl = $('alarm-status');
-  function setAlarmStatus(msg, color = 'var(--muted)') {
-    if (statusEl) { statusEl.textContent = msg; statusEl.style.color = color; }
-  }
-  setBtn?.addEventListener('click', async () => {
-    if (!client?.connected) return setAlarmStatus('Not connected', '#f55');
-    const value = timeInput?.value;
-    if (!value) return setAlarmStatus('Pick a time first');
-    const [h, m] = value.split(':').map(Number);
-    const target = new Date();
-    target.setHours(h, m, 0, 0);
-    if (target <= new Date()) target.setDate(target.getDate() + 1);
-    try {
-      await client.setAlarm(Math.floor(target.getTime() / 1000));
-      setAlarmStatus(`Armed for ${target.toLocaleString()}`, 'var(--rec-good)');
-    } catch (err) { setAlarmStatus(err.message ?? String(err), '#f55'); }
-  });
-  offBtn?.addEventListener('click', async () => {
-    if (!client?.connected) return setAlarmStatus('Not connected', '#f55');
-    try { await client.disableAlarm(); setAlarmStatus('Alarm disabled'); }
-    catch (err) { setAlarmStatus(err.message ?? String(err), '#f55'); }
-  });
-  runBtn?.addEventListener('click', async () => {
-    if (!client?.connected) return setAlarmStatus('Not connected', '#f55');
-    try { await client.runAlarmNow(); setAlarmStatus('Buzz!', 'var(--rec-good)'); }
-    catch (err) { setAlarmStatus(err.message ?? String(err), '#f55'); }
-  });
-}
-wireAlarm();
 
 // ----- Wake alarm card (Overview) -----------------------------------------
 //

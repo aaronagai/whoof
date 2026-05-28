@@ -5,7 +5,7 @@
 
 // Bump this version any time the caching strategy or precache list changes
 // so old caches are pruned on activate.
-const CACHE_NAME = 'whoopfree-v3';
+const CACHE_NAME = 'whoopfree-v4';
 
 // Assets to pre-cache on install. Paths are relative to SW scope (/)
 const PRECACHE = [

@@ -721,12 +721,25 @@ main.content {
 }
 .ring-card .ring-foot strong { color: var(--text); font-weight: 600; }
 
-/* Sparkline */
-.ring-card canvas.spark {
-  display: block;
+/* Sparkline — fixed-height wrapper prevents Chart.js (responsive +
+   maintainAspectRatio:false) from feedback-looping with the card's content
+   height and growing the canvas to tens of thousands of pixels.
+   Belt-and-braces: hard-cap the canvas itself with max-height + !important so
+   Chart.js's inline style can never override us (it sometimes writes
+   style.height directly during resize). */
+.ring-card .spark-wrap {
+  position: relative;
   width: 100%;
   height: 36px;
+  max-height: 36px;
   margin-top: 14px;
+  overflow: hidden;
+}
+.ring-card canvas.spark {
+  display: block;
+  width: 100% !important;
+  height: 36px !important;
+  max-height: 36px;
 }
 
 /* ───────────────────────────────────────────────── */

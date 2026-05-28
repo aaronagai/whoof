@@ -122,18 +122,7 @@
       <div id="diag-output" style="font-size:10px; color:var(--muted); margin-top:4px; min-height:1em; white-space:pre-wrap; max-height:60px; overflow-y:auto; font-family:monospace;"></div>
     </details>
 
-    <details id="mvp-alarm-details" style="display:none; font-size:11px; margin-top:4px;">
-      <summary style="cursor:pointer; color:var(--muted);">⏰ Smart alarm</summary>
-      <div style="display:flex; gap:4px; align-items:center; margin-top:4px;">
-        <input id="alarm-time" type="time" style="font-size:11px; flex:1;"/>
-        <button id="alarm-set" style="font-size:10px;">Set</button>
-        <button id="alarm-disable" style="font-size:10px;">Off</button>
-        <button id="alarm-run" style="font-size:10px;" title="Test fire">▶</button>
-      </div>
-      <div id="alarm-status" style="font-size:10px; color:var(--muted); margin-top:2px;"></div>
-    </details>
-
-    <details id="mvp-captures-details" style="font-size:11px; margin-top:4px;">
+<details id="mvp-captures-details" style="font-size:11px; margin-top:4px;">
       <summary style="cursor:pointer; color:var(--muted);">📚 Saved captures <span id="captures-count" style="font-variant-numeric:tabular-nums;">(0)</span></summary>
       <div id="captures-list" style="font-size:10px; color:var(--muted); margin-top:4px; max-height:120px; overflow-y:auto;"></div>
     </details>
@@ -250,7 +239,7 @@
           </div>
         </div>
         <div class="ring-foot" id="sleep-ring-foot"></div>
-        <canvas id="sleep-sparkline" class="spark"></canvas>
+        <div class="spark-wrap"><canvas id="sleep-sparkline" class="spark"></canvas></div>
       </div>
 
       <div class="ring-card recovery">
@@ -262,7 +251,7 @@
           </div>
         </div>
         <div class="ring-foot" id="recovery-ring-foot"></div>
-        <canvas id="recovery-sparkline" class="spark"></canvas>
+        <div class="spark-wrap"><canvas id="recovery-sparkline" class="spark"></canvas></div>
       </div>
 
       <div class="ring-card strain">
@@ -274,7 +263,7 @@
           </div>
         </div>
         <div class="ring-foot" id="strain-ring-foot"></div>
-        <canvas id="strain-sparkline" class="spark"></canvas>
+        <div class="spark-wrap"><canvas id="strain-sparkline" class="spark"></canvas></div>
       </div>
     </div>
 
