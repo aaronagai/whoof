@@ -1,5 +1,5 @@
 // Synthetic-data generator: 14 (configurable) days of realistic-looking
-// nights + daytime + workouts. Port of whoopfree/cli.py::seed_demo.
+// nights + daytime + workouts. Port of whoof/cli.py::seed_demo.
 //
 // Triggered via the MVP panel button (Phase 1 scaffold). On click we
 // insert samples into IndexedDB, then rollupMissing fills daily metrics

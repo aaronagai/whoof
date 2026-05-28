@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>whoopfree</string>
+        <string>whoof</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -50,9 +50,9 @@
 
 	<!-- ─── Bluetooth permissions (required by iOS to scan for the Whoop strap) ─── -->
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>whoopfree uses Bluetooth to read your Whoop 4.0 strap (heart rate, HRV, SpO₂, and sleep data) directly from your wrist — your data never leaves the phone.</string>
+	<string>whoof uses Bluetooth to read your Whoop 4.0 strap (heart rate, HRV, SpO₂, and sleep data) directly from your wrist — your data never leaves the phone.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>whoopfree uses Bluetooth to read your Whoop 4.0 strap.</string>
+	<string>whoof uses Bluetooth to read your Whoop 4.0 strap.</string>
 
 	<!-- Dark UI style — matches the design system -->
 	<key>UIUserInterfaceStyle</key>

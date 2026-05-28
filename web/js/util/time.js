@@ -1,5 +1,5 @@
 // Time / date helpers. Local-day keys match the Python "YYYY-MM-DD" daily
-// rollup convention used in whoopfree/db.py.
+// rollup convention used in whoof/db.py.
 
 export function isoUtcNow() {
   return new Date().toISOString();

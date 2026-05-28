@@ -1,5 +1,5 @@
 // HR zones, calorie estimation (Keytel), and continuous stress level.
-// Ported from whoopfree/zones.py.
+// Ported from whoof/zones.py.
 
 // Zone boundaries as fractions of max HR (industry standard 5-zone model).
 export const ZONE_BOUNDS = [

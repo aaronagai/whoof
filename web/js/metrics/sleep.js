@@ -1,5 +1,5 @@
 // Sleep window detection, stage classification, and derived sleep metrics.
-// Ported from whoopfree/sleep.py.
+// Ported from whoof/sleep.py.
 //
 // Heuristics are deterministic and based on motion + HR + RR-interval
 // variability. Intentionally simple: no FFT libraries, no ML models. They

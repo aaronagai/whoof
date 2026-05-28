@@ -8,7 +8,7 @@ import { insertSamplesBatch, putProfile } from '../../../web/js/data/queries.js'
 import { recomputeRecent } from '../../../web/js/metrics/rollup.js';
 import { localDateKey, startOfLocalDay } from '../../../web/js/util/time.js';
 
-const TEST_DB = 'whoopfree-dst-test';
+const TEST_DB = 'whoof-dst-test';
 
 function freshDb() {
   return new Promise((resolve) => {

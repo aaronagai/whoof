@@ -13,7 +13,7 @@
 //   onConflict(fn)         → register a callback fired when another tab
 //                            claims connection while we're also connected
 
-const CHANNEL_NAME = 'whoopfree-ble-coord';
+const CHANNEL_NAME = 'whoof-ble-coord';
 const PING_REPLY_MS = 200;
 
 let _channel = null;

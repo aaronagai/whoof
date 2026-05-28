@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from whoopfree import zones
+from whoof import zones
 
 
 def test_max_hr_default_formula():

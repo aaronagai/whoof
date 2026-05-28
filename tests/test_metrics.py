@@ -6,7 +6,7 @@ import math
 import random
 import statistics
 
-from whoopfree import metrics
+from whoof import metrics
 
 
 def test_filter_rr_drops_ectopic_beats():

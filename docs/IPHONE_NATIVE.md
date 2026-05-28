@@ -1,4 +1,4 @@
-# Install whoopfree as a real native iOS app — free, no Apple Developer account
+# Install whoof as a real native iOS app — free, no Apple Developer account
 
 Unlike the PWA path (see `IPHONE.md`), this gets you:
 
@@ -39,9 +39,9 @@ Inside Xcode:
 2. Make sure the **"App" target** is selected (centre pane, top-left dropdown)
 3. Go to the **"Signing & Capabilities"** tab
 4. **Team** → pick your Apple ID (it shows up as *"Your Name (Personal Team)"*)
-5. **Bundle Identifier** → change `com.whoopfree.dashboard` to something
+5. **Bundle Identifier** → change `com.whoof.dashboard` to something
    unique under your Apple ID — Xcode requires this for personal-team signing.
-   Suggestion: `com.<yourname>.whoopfree` (e.g. `com.madhur.whoopfree`)
+   Suggestion: `com.<yourname>.whoof` (e.g. `com.madhur.whoof`)
 6. Xcode will say *"Automatically manage signing"* — leave it checked
 
 ### 3. Plug in the iPhone & enable Developer Mode
@@ -63,7 +63,7 @@ The first launch on the iPhone:
 1. iOS will say **"Untrusted Developer"** → tap OK
 2. On the phone, go to **Settings → General → VPN & Device Management →
    <Your Apple ID> → Trust**
-3. Re-launch whoopfree from the Home Screen
+3. Re-launch whoof from the Home Screen
 
 You should see the dashboard with the same three-ring layout, but now it can
 talk to your Whoop strap natively via Bluetooth.
@@ -127,7 +127,7 @@ connection requires the iOS Bluetooth permission prompt — accept it.
 
 **Bundle identifier conflict**
 → Another app on your Apple ID is using the same bundle ID. Change it under
-Signing & Capabilities to something unique like `com.yourname.whoopfree`.
+Signing & Capabilities to something unique like `com.yourname.whoof`.
 
 **App quits immediately on launch**
 → Check Xcode's console (Window → Devices and Simulators → select your phone → View Device Logs)
@@ -149,7 +149,7 @@ granted — uninstall & re-install.
 │  ┌───────────────────────────────────────────┐  │
 │  │  WKWebView                                │  │
 │  │  ┌─────────────────────────────────────┐  │  │
-│  │  │  whoopfree dashboard (web/)         │  │  │
+│  │  │  whoof dashboard (web/)         │  │  │
 │  │  │  - Same HTML / CSS / JS as on web   │  │  │
 │  │  │  - Uses navigator.bluetooth         │  │  │
 │  │  └────────────┬────────────────────────┘  │  │

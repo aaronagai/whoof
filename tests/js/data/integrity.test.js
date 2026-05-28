@@ -3,7 +3,7 @@ import { openDb } from '../../../web/js/data/db.js';
 import { insertSamplesBatch } from '../../../web/js/data/queries.js';
 import { verifyData, summarizeIntegrity } from '../../../web/js/data/integrity.js';
 
-const TEST_DB = 'whoopfree-integrity-test';
+const TEST_DB = 'whoof-integrity-test';
 
 function freshDb() {
   return new Promise((resolve) => {

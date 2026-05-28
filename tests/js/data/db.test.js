@@ -12,10 +12,10 @@ function freshDb(name) {
 }
 
 describe('openDb', () => {
-  beforeEach(() => freshDb('whoopfree-test-db'));
+  beforeEach(() => freshDb('whoof-test-db'));
 
   it('creates all declared object stores at version 1', async () => {
-    const db = await openDb('whoopfree-test-db');
+    const db = await openDb('whoof-test-db');
     const names = Array.from(db.objectStoreNames);
     for (const store of Object.keys(STORES)) {
       expect(names).toContain(store);
@@ -24,7 +24,7 @@ describe('openDb', () => {
   });
 
   it('creates indexes on the samples store', async () => {
-    const db = await openDb('whoopfree-test-db');
+    const db = await openDb('whoof-test-db');
     const tx = db.transaction('samples');
     const idx = Array.from(tx.objectStore('samples').indexNames);
     expect(idx).toContain('ts_utc');
@@ -34,7 +34,7 @@ describe('openDb', () => {
   });
 
   it('round-trips one inserted record', async () => {
-    const db = await openDb('whoopfree-test-db');
+    const db = await openDb('whoof-test-db');
     const wtx = db.transaction('device_events', 'readwrite');
     wtx.objectStore('device_events').add({
       ts_utc: '2026-05-20T10:00:00Z',

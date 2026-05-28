@@ -1,4 +1,4 @@
-/* whoopfree v0.2 — dashboard front-end */
+/* whoof v0.2 — dashboard front-end */
 
 const $ = (id) => document.getElementById(id);
 const fmt = (v, d = 1) =>
@@ -1377,7 +1377,7 @@ async function exportDailyMetricsCsv() {
   const a = document.createElement("a");
   const stamp = new Date().toISOString().slice(0, 10);
   a.href = url;
-  a.download = `whoopfree-daily-metrics-${stamp}.csv`;
+  a.download = `whoof-daily-metrics-${stamp}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

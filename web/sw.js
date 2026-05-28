@@ -1,11 +1,11 @@
-// Service worker for whoopfree PWA.
+// Service worker for whoof PWA.
 // Strategy: network-first for HTML and same-origin JS/CSS (so updates land
 // immediately on refresh), cache-first only for static immutable assets
 // (fonts, vendor bundles). IndexedDB is always local — no SW handling.
 
 // Bump this version any time the caching strategy or precache list changes
 // so old caches are pruned on activate.
-const CACHE_NAME = 'whoopfree-v4';
+const CACHE_NAME = 'whoof-v4';
 
 // Assets to pre-cache on install. Paths are relative to SW scope (/)
 const PRECACHE = [

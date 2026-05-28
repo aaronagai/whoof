@@ -1,4 +1,4 @@
-"""Allow `python -m whoopfree ...`."""
+"""Allow `python -m whoof ...`."""
 
 from .cli import cli
 

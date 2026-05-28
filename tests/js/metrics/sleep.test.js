@@ -2,7 +2,7 @@
 // respiratory rate. Ported from tests/test_sleep.py.
 //
 // The Python `compute_sleep_for_day` and `history_for_consistency` helpers
-// touch SQLite via `whoopfree.db`. They are intentionally NOT exported by the
+// touch SQLite via `whoof.db`. They are intentionally NOT exported by the
 // JS module — the JS layer expects callers to fetch samples from IndexedDB
 // and pass them in directly. All other functions port 1:1.
 

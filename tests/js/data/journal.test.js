@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { openDb } from '../../../web/js/data/db.js';
 import { upsertJournalEntry, journalForDate, recentJournalEntries } from '../../../web/js/data/queries.js';
 
-const TEST_DB = 'whoopfree-journal-test';
+const TEST_DB = 'whoof-journal-test';
 
 function freshDb() {
   return new Promise((resolve) => {

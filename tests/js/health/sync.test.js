@@ -6,7 +6,7 @@ import {
   readShortcutResult, buildIngestUrl,
 } from '../../../web/js/health/sync.js';
 
-const TEST_DB = 'whoopfree-health-test';
+const TEST_DB = 'whoof-health-test';
 
 function freshDb() {
   return new Promise((resolve) => {

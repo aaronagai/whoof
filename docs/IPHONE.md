@@ -1,6 +1,6 @@
-# Installing whoopfree on iPhone (no App Store, no developer account)
+# Installing whoof on iPhone (no App Store, no developer account)
 
-whoopfree is a Progressive Web App (PWA). With iOS Safari's **Add to Home
+whoof is a Progressive Web App (PWA). With iOS Safari's **Add to Home
 Screen** feature, it installs as a real-feeling app — your own icon on the
 Home Screen, opens fullscreen, runs without a browser chrome — and **does not
 require an Apple Developer account or the App Store**.
@@ -68,9 +68,9 @@ It **must** be Safari — Chrome and Firefox on iOS can't install PWAs.
 
 1. Tap the **Share** icon at the bottom of Safari (square with arrow up)
 2. Scroll down → **Add to Home Screen**
-3. Confirm the name (defaults to "whoopfree") → tap **Add**
+3. Confirm the name (defaults to "whoof") → tap **Add**
 
-You'll see the whoopfree icon appear on your Home Screen.
+You'll see the whoof icon appear on your Home Screen.
 
 ### 4. Launch from the Home Screen
 

@@ -85,7 +85,7 @@ export async function stopCapture(db = null) {
     durationMs: Date.now() - _state.startedAt,
     rowCount: _state.rows.length,
     capped: !!_state.capped,
-    schema: 'whoopfree-capture/v1',
+    schema: 'whoof-capture/v1',
   };
   const lines = [JSON.stringify({ _meta: meta })];
   for (const row of _state.rows) lines.push(JSON.stringify(row));

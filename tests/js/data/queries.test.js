@@ -11,7 +11,7 @@ import {
   personalRecords,
 } from '../../../web/js/data/queries.js';
 
-const TEST_DB = 'whoopfree-queries-test';
+const TEST_DB = 'whoof-queries-test';
 
 function freshDb() {
   return new Promise((resolve) => {

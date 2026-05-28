@@ -1,8 +1,8 @@
-// IndexedDB schema for whoopfree v0.3.
-// Mirrors the SQLite schema in whoopfree/db.py:15-110 so the Python rollups
+// IndexedDB schema for whoof v0.3.
+// Mirrors the SQLite schema in whoof/db.py:15-110 so the Python rollups
 // can serve as a porting reference.
 
-export const DB_NAME = 'whoopfree';
+export const DB_NAME = 'whoof';
 export const DB_VERSION = 3;
 
 // indexes: [indexName, keyPath?] — keyPath defaults to indexName

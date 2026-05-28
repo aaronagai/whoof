@@ -5,7 +5,7 @@
 //
 // Exported for use by app-mvp.js (which imports this module).
 
-const STORAGE_KEY = 'whoopfree-notifications-enabled';
+const STORAGE_KEY = 'whoof-notifications-enabled';
 
 /** True if the user has granted permission AND opted in. */
 export function notificationsEnabled() {

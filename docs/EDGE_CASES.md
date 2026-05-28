@@ -1,4 +1,4 @@
-# Edge Cases & How whoopfree Handles Them
+# Edge Cases & How whoof Handles Them
 
 A grimoire of edge cases we've thought about and what the code does about
 them. Add to this file whenever you discover a new one in the wild.

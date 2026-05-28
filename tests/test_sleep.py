@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from datetime import date, datetime, time, timedelta, timezone
 
-from whoopfree import sleep
+from whoof import sleep
 
 
 class FakeRow(dict):

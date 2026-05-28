@@ -1,4 +1,4 @@
-// Recovery score functions ported from whoopfree/metrics.py.
+// Recovery score functions ported from whoof/metrics.py.
 //
 // The Python `recovery_breakdown` takes a sqlite3.Connection and reads
 // prior-day rows. In the browser we keep these functions pure: the caller
@@ -70,7 +70,7 @@ function round1(v) {
  * Higher score is "better recovery". When `inverted=true`, a lower value
  * relative to baseline is treated as better (e.g. resting heart rate).
  *
- * Mirrors `_z_to_score` in whoopfree/metrics.py: clamp z to +/-3 sigma,
+ * Mirrors `_z_to_score` in whoof/metrics.py: clamp z to +/-3 sigma,
  * then linearly map to [0, 100] with 50 as baseline.
  *
  * @param {number|null|undefined} value

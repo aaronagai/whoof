@@ -1,13 +1,13 @@
 {
-  "name": "whoopfree-web",
+  "name": "whoof-web",
   "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "deploy": "wrangler pages deploy web --project-name=whoopfree --branch=main",
-    "deploy:preview": "wrangler pages deploy web --project-name=whoopfree",
+    "deploy": "wrangler pages deploy web --project-name=whoof --branch=main",
+    "deploy:preview": "wrangler pages deploy web --project-name=whoof",
     "cap:sync": "cap sync ios",
     "cap:open": "cap open ios"
   },

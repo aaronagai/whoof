@@ -3,7 +3,7 @@ import { openDb } from '../../../web/js/data/db.js';
 import { insertSamplesBatch, getDailyMetric, putProfile } from '../../../web/js/data/queries.js';
 import { rollupDay, rollupMissing } from '../../../web/js/metrics/rollup.js';
 
-const TEST_DB = 'whoopfree-rollup-test';
+const TEST_DB = 'whoof-rollup-test';
 
 function freshDb() {
   return new Promise((resolve) => {

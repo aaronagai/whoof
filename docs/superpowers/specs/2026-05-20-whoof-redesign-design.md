@@ -1,4 +1,4 @@
-# whoopfree v0.2 — Whoop-style redesign
+# whoof v0.2 — Whoop-style redesign
 
 Date: 2026-05-20
 Status: implementing
@@ -43,7 +43,7 @@ New columns on `daily_metrics`: `deep_sleep_minutes`, `rem_sleep_minutes`, `ligh
 ## File layout
 
 ```
-whoopfree/
+whoof/
   db.py        # extended: migration, profile/sleep_stages/workouts helpers
   metrics.py   # extended: recovery breakdown, skin temp deviation
   sleep.py     # NEW: stage classifier, need/debt/consistency, respiratory rate

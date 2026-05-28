@@ -1,7 +1,7 @@
 # Whoop 4.0 BLE Protocol Reference
 
 Permanent reference for the custom GATT service exposed by the Whoop 4.0
-strap. This is the protocol that `whoopfree` (the JS web client under
+strap. This is the protocol that `whoof` (the JS web client under
 `web/js/ble/`) speaks, and the protocol implemented — to varying degrees —
 by the two vendored reverse-engineering projects under `vendor/`.
 
@@ -253,7 +253,7 @@ command number for quick lookup. For each command:
   `COMMAND_RESPONSE` (on `CHAR_RESPONSE`) when known
 - **Notes** — what the command does and what state it triggers
 - **Used by** — `whoomp` (`vendor/whoomp/`), `whoop-reader`
-  (`vendor/whoop-reader/`), `whoopfree` (this repo, `web/js/ble/`),
+  (`vendor/whoop-reader/`), `whoof` (this repo, `web/js/ble/`),
   or "—" if no source actively exercises it. "defined-only" means the
   name/number is in an enum but no code path issues it.
 
@@ -266,23 +266,23 @@ says `[0x00]`.
 |---:|-----|------|----------------------|----------------------|-------|---------|
 | 1 | `0x01` | `LINK_VALID` | unknown | unknown | Link-layer keepalive / handshake. No exercise found. | defined-only |
 | 2 | `0x02` | `GET_MAX_PROTOCOL_VERSION` | unknown | unknown | Negotiate protocol version. | defined-only |
-| 3 | `0x03` | `TOGGLE_REALTIME_HR` | `[u8 enable]` (0x00 stop, 0x01 start) | echoes cmd; starts `REALTIME_DATA` flow on `CHAR_DATA` | Subscribe/unsubscribe from the live HR/RR sample stream. | whoomp, whoopfree |
+| 3 | `0x03` | `TOGGLE_REALTIME_HR` | `[u8 enable]` (0x00 stop, 0x01 start) | echoes cmd; starts `REALTIME_DATA` flow on `CHAR_DATA` | Subscribe/unsubscribe from the live HR/RR sample stream. | whoomp, whoof |
 | 7 | `0x07` | `REPORT_VERSION_INFO` | `[0x00]` | `[u8 u8 u8] + 16 × u32le` versions; `harvard = v0.v1.v2.v3`, `boylston = v4.v5.v6.v7` | Returns firmware Harvard/Boylston version strings (and 8 more u32 fields not yet labelled). See `vendor/whoomp/whoomp.js:111-134` and `vendor/whoomp/scripts/packet.py:249-253`. | whoomp |
-| 10 | `0x0A` | `SET_CLOCK` | `u32le unix_seconds` | (none observed in whoomp; presumably empty ack) | Set the strap's RTC. Our client writes a bare 4-byte unix timestamp (`web/js/ble/client.js:344-351`). | whoopfree |
-| 11 | `0x0B` | `GET_CLOCK` | `[0x00]` | `[u8 u8] + u32le unix_seconds` at offset 2 | Read the strap's RTC. We compare it to host time and call `SET_CLOCK` if drift > 5 s. | whoomp, whoopfree |
+| 10 | `0x0A` | `SET_CLOCK` | `u32le unix_seconds` | (none observed in whoomp; presumably empty ack) | Set the strap's RTC. Our client writes a bare 4-byte unix timestamp (`web/js/ble/client.js:344-351`). | whoof |
+| 11 | `0x0B` | `GET_CLOCK` | `[0x00]` | `[u8 u8] + u32le unix_seconds` at offset 2 | Read the strap's RTC. We compare it to host time and call `SET_CLOCK` if drift > 5 s. | whoomp, whoof |
 | 14 | `0x0E` | `TOGGLE_GENERIC_HR_PROFILE` | `[u8 enable]` | unknown | Toggle the standard BLE Heart Rate profile (the generic GATT 0x180D service) on the strap — lets non-Whoop apps see HR. | whoomp (`scripts/whoop.py` `ghr_on`/`ghr_off`) |
 | 16 | `0x10` | `TOGGLE_R7_DATA_COLLECTION` | unknown | unknown | Toggle an internal "R7" data collection mode. | defined-only |
 | 19 | `0x13` | `RUN_HAPTIC_PATTERN_MAVERICK` | unknown | unknown | Likely a Maverick-codename variant of haptic pattern playback. | defined-only |
-| 20 | `0x14` | `ABORT_HISTORICAL_TRANSMITS` | `[0x00]` | unknown | Abort an in-progress historical dump (graceful interrupt). We expose this as `abortHistoricalTransmits()` (`web/js/ble/client.js:361-363`) but don't currently call it. | whoopfree (defined, not exercised) |
-| 22 | `0x16` | `SEND_HISTORICAL_DATA` | `[0x00]` | strap begins streaming `HISTORICAL_DATA` + `METADATA` on `CHAR_DATA` | Kick off the history-dump state machine (see §7). | whoomp, whoopfree |
-| 23 | `0x17` | `HISTORICAL_DATA_RESULT` | `[0x01][u32le trim][u32le 0]` (9 bytes) | strap continues / completes dump | ACK for each `HISTORY_END` batch, telling the strap how far to advance its flash read pointer. See §7. | whoomp, whoopfree |
+| 20 | `0x14` | `ABORT_HISTORICAL_TRANSMITS` | `[0x00]` | unknown | Abort an in-progress historical dump (graceful interrupt). We expose this as `abortHistoricalTransmits()` (`web/js/ble/client.js:361-363`) but don't currently call it. | whoof (defined, not exercised) |
+| 22 | `0x16` | `SEND_HISTORICAL_DATA` | `[0x00]` | strap begins streaming `HISTORICAL_DATA` + `METADATA` on `CHAR_DATA` | Kick off the history-dump state machine (see §7). | whoomp, whoof |
+| 23 | `0x17` | `HISTORICAL_DATA_RESULT` | `[0x01][u32le trim][u32le 0]` (9 bytes) | strap continues / completes dump | ACK for each `HISTORY_END` batch, telling the strap how far to advance its flash read pointer. See §7. | whoomp, whoof |
 | 25 | `0x19` | `FORCE_TRIM` | `struct.pack("<LL", 0, 0)` in whoomp test code (didn't appear to work) | unknown | Force the strap to trim/free its flash log up to some offset. Probably needs two real u32 indices. | whoomp (defined, didn't work) |
-| 26 | `0x1A` | `GET_BATTERY_LEVEL` | `[0x00]` | `[u8 u8] + u16le battery×10` at offset 2 (i.e. 152 = 15.2%) | Poll battery state of charge. We poll every 60 s. | whoomp, whoop-reader, whoopfree |
+| 26 | `0x1A` | `GET_BATTERY_LEVEL` | `[0x00]` | `[u8 u8] + u16le battery×10` at offset 2 (i.e. 152 = 15.2%) | Poll battery state of charge. We poll every 60 s. | whoomp, whoop-reader, whoof |
 | 29 | `0x1D` | `REBOOT_STRAP` | `[0x00]` | unknown (strap drops BLE before sending) | Soft reboot the firmware. | whoomp |
 | 32 | `0x20` | `POWER_CYCLE_STRAP` | unknown | unknown | Hard power cycle (vs. soft `REBOOT_STRAP`). | defined-only |
 | 33 | `0x21` | `SET_READ_POINTER` | unknown (likely `u32le` flash offset) | unknown | Move the historical-data read pointer manually. Used to re-read or skip records. | defined-only |
-| 34 | `0x22` | `GET_DATA_RANGE` | `[0x00]` (our speculation) | speculative: `[u8 u8] + u32le start_unix + u32le end_unix` | Query the range of timestamps currently stored in flash. We expose `getDataRange()` but it's untested; the response layout in `parseDataRangeResponse` (`web/js/ble/parsers.js:194-203`) is a guess. | whoopfree (defined, not validated) |
-| 35 | `0x23` | `GET_HELLO_HARVARD` | `[0x00]` | ≥117-byte body; `data[7] = charging u8`, `data[9..18] = ASCII serial (9 chars)`, `data[116] = isWorn u8`, lots of telemetry in between | The post-connect "who am I" probe. Returns charging state, serial number, wrist-worn state, and ~100 bytes of internal config the field meanings of which are not all known. See `vendor/whoomp/whoomp.js:153-160` and `vendor/whoomp/scripts/whoop.py:135-142` for example hex dumps. | whoomp, whoopfree |
+| 34 | `0x22` | `GET_DATA_RANGE` | `[0x00]` (our speculation) | speculative: `[u8 u8] + u32le start_unix + u32le end_unix` | Query the range of timestamps currently stored in flash. We expose `getDataRange()` but it's untested; the response layout in `parseDataRangeResponse` (`web/js/ble/parsers.js:194-203`) is a guess. | whoof (defined, not validated) |
+| 35 | `0x23` | `GET_HELLO_HARVARD` | `[0x00]` | ≥117-byte body; `data[7] = charging u8`, `data[9..18] = ASCII serial (9 chars)`, `data[116] = isWorn u8`, lots of telemetry in between | The post-connect "who am I" probe. Returns charging state, serial number, wrist-worn state, and ~100 bytes of internal config the field meanings of which are not all known. See `vendor/whoomp/whoomp.js:153-160` and `vendor/whoomp/scripts/whoop.py:135-142` for example hex dumps. | whoomp, whoof |
 | 36 | `0x24` | `START_FIRMWARE_LOAD` | unknown | unknown | Begin OTA firmware upload (old DFU path). | defined-only |
 | 37 | `0x25` | `LOAD_FIRMWARE_DATA` | unknown | unknown | Stream firmware bytes during OTA. | defined-only |
 | 38 | `0x26` | `PROCESS_FIRMWARE_IMAGE` | unknown | unknown | Trigger firmware verification + install. | defined-only |
@@ -302,7 +302,7 @@ says `[0x00]`.
 | 69 | `0x45` | `DISABLE_ALARM` | unknown | unknown | Disable a configured alarm. | defined-only |
 | 76 | `0x4C` | `GET_ADVERTISING_NAME_HARVARD` | unknown | unknown | Read the BLE advertising name (Harvard variant). | defined-only |
 | 77 | `0x4D` | `SET_ADVERTISING_NAME_HARVARD` | unknown | unknown | Write the BLE advertising name (Harvard variant). | defined-only |
-| 79 | `0x4F` | `RUN_HAPTICS_PATTERN` | `[u8 pattern]` (whoomp uses `0x00`; we expose `runHaptics(pattern=0)`) | unknown | Play a stored haptic pattern. | whoomp, whoopfree |
+| 79 | `0x4F` | `RUN_HAPTICS_PATTERN` | `[u8 pattern]` (whoomp uses `0x00`; we expose `runHaptics(pattern=0)`) | unknown | Play a stored haptic pattern. | whoomp, whoof |
 | 80 | `0x50` | `GET_ALL_HAPTICS_PATTERN` | unknown | unknown | Dump all configured haptic patterns. | defined-only |
 | 81 | `0x51` | `START_RAW_DATA` | `[0x01]` in whoomp test code | begins `REALTIME_RAW_DATA` stream on `CHAR_DATA` | Subscribe to raw PPG channel data. Body layout unknown. | whoomp |
 | 82 | `0x52` | `STOP_RAW_DATA` | `[0x01]` in whoomp test code (likely should be `0x00`) | stops `REALTIME_RAW_DATA` | Stop the raw data stream. | whoomp |

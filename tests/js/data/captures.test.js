@@ -4,7 +4,7 @@ import {
   saveCapture, listCaptures, getCapture, deleteCapture,
 } from '../../../web/js/data/queries.js';
 
-const TEST_DB = 'whoopfree-captures-test';
+const TEST_DB = 'whoof-captures-test';
 
 function freshDb() {
   return new Promise((resolve) => {

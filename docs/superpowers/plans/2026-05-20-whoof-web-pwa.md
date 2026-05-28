@@ -1,8 +1,8 @@
-# whoopfree v0.3 (Browser PWA) Implementation Plan
+# whoof v0.3 (Browser PWA) Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Migrate `whoopfree` from a Python recorder + HTTP dashboard to a pure-browser PWA that reads the Whoop 4.0 via Web Bluetooth, stores data in IndexedDB, and computes every metric in JavaScript. One codebase runs in Mac Chrome (dev) and iPhone Bluefy (target).
+**Goal:** Migrate `whoof` from a Python recorder + HTTP dashboard to a pure-browser PWA that reads the Whoop 4.0 via Web Bluetooth, stores data in IndexedDB, and computes every metric in JavaScript. One codebase runs in Mac Chrome (dev) and iPhone Bluefy (target).
 
 **Architecture:** Static SPA, no backend. Web Bluetooth → in-browser 96-byte packet decode → IndexedDB writes → on-demand daily rollups. The v0.2 UI (HTML/CSS + render functions in `web/app.js`) is reused; the v0.2 Python backend (`db.py`, `dashboard.py`, `recorder.py`, `metrics.py`, `sleep.py`, `zones.py`, `workouts.py`) is replaced.
 
@@ -10,7 +10,7 @@
 
 **Repo state:** Project is not currently a git repo. Plan does NOT include `git commit` steps — substitute "snapshot checkpoint" if/when a repo is initialized. Use `npm test` after every implementation step to verify.
 
-**Spec:** [`docs/superpowers/specs/2026-05-20-whoopfree-web-pwa-design.md`](../specs/2026-05-20-whoopfree-web-pwa-design.md)
+**Spec:** [`docs/superpowers/specs/2026-05-20-whoof-web-pwa-design.md`](../specs/2026-05-20-whoof-web-pwa-design.md)
 
 ---
 
@@ -72,12 +72,12 @@ package.json                   (NEW — vitest, fake-indexeddb, jsdom devDeps)
 vitest.config.js               (NEW — point at tests/js, load setup.js)
 .npmrc                         (NEW — `save-exact=true`)
 
-whoopfree/                     (trimmed Python — kept for static-serve only)
+whoof/                     (trimmed Python — kept for static-serve only)
   cli.py                       (trimmed: keep `dash`; remove record/rollup/scan/info/battery/status/seed-demo)
   static_server.py             (renamed from dashboard.py; serves /web; no API routes)
 
 # DEPRECATED but kept on disk for reference until v0.3 ships:
-#   whoopfree/db.py, metrics.py, sleep.py, zones.py, workouts.py, recorder.py, dashboard.py
+#   whoof/db.py, metrics.py, sleep.py, zones.py, workouts.py, recorder.py, dashboard.py
 #   vendor/whoop-reader (Python BLE driver) — used as porting reference only
 ```
 
@@ -97,7 +97,7 @@ whoopfree/                     (trimmed Python — kept for static-serve only)
 
 ```json
 {
-  "name": "whoopfree-web",
+  "name": "whoof-web",
   "version": "0.3.0",
   "private": true,
   "type": "module",
@@ -608,15 +608,15 @@ export function parseRealtimePacket(data) {
 - Create: `web/js/data/db.js`
 - Create: `tests/js/data/db.test.js`
 
-Source: `whoopfree/db.py:15-110` (schema).
+Source: `whoof/db.py:15-110` (schema).
 
 - [ ] **Step 1: Write `web/js/data/schema.js`** (single source of truth for stores + indexes)
 
 ```js
-// IndexedDB schema for whoopfree v0.3.
-// Mirrors the SQLite schema in whoopfree/db.py.
+// IndexedDB schema for whoof v0.3.
+// Mirrors the SQLite schema in whoof/db.py.
 
-export const DB_NAME = 'whoopfree';
+export const DB_NAME = 'whoof';
 export const DB_VERSION = 1;
 
 export const STORES = {
@@ -649,7 +649,7 @@ describe('openDb', () => {
   beforeEach(() => {
     // fake-indexeddb auto-shim provides a fresh DB per file when we delete first
     return new Promise((resolve) => {
-      const req = indexedDB.deleteDatabase('whoopfree');
+      const req = indexedDB.deleteDatabase('whoof');
       req.onsuccess = () => resolve();
       req.onerror = () => resolve();
       req.onblocked = () => resolve();
@@ -729,7 +729,7 @@ import {
 let db;
 beforeEach(async () => {
   await new Promise((r) => {
-    const req = indexedDB.deleteDatabase('whoopfree');
+    const req = indexedDB.deleteDatabase('whoof');
     req.onsuccess = r; req.onerror = r; req.onblocked = r;
   });
   db = await openDb();
@@ -1257,7 +1257,7 @@ kill %1
 
 Expected: all paths return `200`.
 
-If any 404: open `whoopfree/dashboard.py`, check the static-file route handler — the existing one may serve only top-level files in `web/`. May need to extend to serve nested `web/js/...`. Fix before proceeding.
+If any 404: open `whoof/dashboard.py`, check the static-file route handler — the existing one may serve only top-level files in `web/`. May need to extend to serve nested `web/js/...`. Fix before proceeding.
 
 ---
 
@@ -1282,7 +1282,7 @@ A native device picker should appear. Select your Whoop.
 - *Status* pill turns green (`connected`)
 - *HR* number updates within a few seconds
 - *Samples this session* counter increments at ~1 Hz
-- Chrome DevTools → Application → IndexedDB → `whoopfree` → `samples` shows rows accumulating
+- Chrome DevTools → Application → IndexedDB → `whoof` → `samples` shows rows accumulating
 
 - [ ] **Step 5: Simulate a drop**
 
@@ -1312,7 +1312,7 @@ Pattern (apply to every task in this phase):
 - Create: `web/js/metrics/hrv.js`
 - Create: `tests/js/metrics/hrv.test.js`
 
-**Port from:** `whoopfree/metrics.py:41-110` (`filter_rr`, `rmssd`, `sdnn`, `pnn50`). **Test reference:** `tests/test_metrics.py:12-60`.
+**Port from:** `whoof/metrics.py:41-110` (`filter_rr`, `rmssd`, `sdnn`, `pnn50`). **Test reference:** `tests/test_metrics.py:12-60`.
 
 - [ ] **Step 1: Read source module + tests**
 - [ ] **Step 2: Port the 7 HRV tests to `tests/js/metrics/hrv.test.js`**
@@ -1326,7 +1326,7 @@ Pattern (apply to every task in this phase):
 - Create: `web/js/metrics/strain.js`
 - Create: `tests/js/metrics/strain.test.js`
 
-**Port from:** `whoopfree/metrics.py` (the `strain_score` family). **Test reference:** `tests/test_metrics.py:63-90` (strain tests).
+**Port from:** `whoof/metrics.py` (the `strain_score` family). **Test reference:** `tests/test_metrics.py:63-90` (strain tests).
 
 - [ ] **Step 1-5:** Same pattern.
 
@@ -1336,7 +1336,7 @@ Pattern (apply to every task in this phase):
 - Create: `web/js/metrics/zones.js`
 - Create: `tests/js/metrics/zones.test.js`
 
-**Port from:** `whoopfree/zones.py`. **Test reference:** `tests/test_zones.py`.
+**Port from:** `whoof/zones.py`. **Test reference:** `tests/test_zones.py`.
 
 ### Task 2.4: Sleep (`sleep.js`)
 
@@ -1344,7 +1344,7 @@ Pattern (apply to every task in this phase):
 - Create: `web/js/metrics/sleep.js`
 - Create: `tests/js/metrics/sleep.test.js`
 
-**Port from:** `whoopfree/sleep.py`. **Test reference:** `tests/test_sleep.py`.
+**Port from:** `whoof/sleep.py`. **Test reference:** `tests/test_sleep.py`.
 
 This is the largest port (475 lines of Python). Take it in three sub-steps within the same task:
 - Stage classifier first (`classify_stages`), with its tests
@@ -1357,7 +1357,7 @@ This is the largest port (475 lines of Python). Take it in three sub-steps withi
 - Create: `web/js/metrics/recovery.js`
 - Create: `tests/js/metrics/recovery.test.js`
 
-**Port from:** `whoopfree/metrics.py` (recovery z-score + 4-component breakdown). Depends on hrv + sleep + strain (for prior-strain component).
+**Port from:** `whoof/metrics.py` (recovery z-score + 4-component breakdown). Depends on hrv + sleep + strain (for prior-strain component).
 
 ### Task 2.6: Workouts (`workouts.js`)
 
@@ -1365,7 +1365,7 @@ This is the largest port (475 lines of Python). Take it in three sub-steps withi
 - Create: `web/js/metrics/workouts.js`
 - Create: `tests/js/metrics/workouts.test.js`
 
-**Port from:** `whoopfree/workouts.py`. **Test reference:** `tests/test_workouts.py`.
+**Port from:** `whoof/workouts.py`. **Test reference:** `tests/test_workouts.py`.
 
 ### Task 2.7: Rollup orchestrator (`rollup.js`)
 
@@ -1395,7 +1395,7 @@ The v0.2 `web/app.js` (≈29 KB) is currently structured as: tab routing + rende
 
 - [ ] **Step 1:** `grep -n "fetch(" web/app.js > /tmp/v02-fetches.txt`
 
-Read the list. For each endpoint (e.g. `/api/today`, `/api/sleep`, `/api/recovery`), note the shape of the JSON it returns (read `whoopfree/dashboard.py` to confirm).
+Read the list. For each endpoint (e.g. `/api/today`, `/api/sleep`, `/api/recovery`), note the shape of the JSON it returns (read `whoof/dashboard.py` to confirm).
 
 - [ ] **Step 2:** Produce a mapping table in your notes:
 
@@ -1455,13 +1455,13 @@ Wire the WhoopClient's `state` events to a persistent UI indicator in the sideba
 - Create: `web/js/dev/seed.js`
 - Modify: `web/js/app.js` (detect `?demo=1` query string → call seed before rendering)
 
-Port the synthetic-data generator from `whoopfree/cli.py` (`cmd_seed_demo`). Hide behind a query string so it isn't accessible in normal flow.
+Port the synthetic-data generator from `whoof/cli.py` (`cmd_seed_demo`). Hide behind a query string so it isn't accessible in normal flow.
 
 ### Task 4.3: Strip Python API + rename
 
-- [ ] **Step 1:** Rename `whoopfree/dashboard.py` → `whoopfree/static_server.py`.
+- [ ] **Step 1:** Rename `whoof/dashboard.py` → `whoof/static_server.py`.
 - [ ] **Step 2:** Delete every `_handle_api_*` method; keep only the static-file serving (`SimpleHTTPRequestHandler`-like behavior over `web/`).
-- [ ] **Step 3:** Update `whoopfree/cli.py`'s `dash` command to point at the renamed module.
+- [ ] **Step 3:** Update `whoof/cli.py`'s `dash` command to point at the renamed module.
 - [ ] **Step 4:** Delete `record`, `rollup`, `scan`, `info`, `battery`, `status`, `seed-demo` commands from `cli.py`.
 - [ ] **Step 5:** Verify: `./run.sh dash` still serves the app on `:8765`; no other CLI commands listed in `--help`.
 
@@ -1473,7 +1473,7 @@ Rewrite `README.md`:
 - Phone section: install Bluefy, open hosted URL (note hosting is deferred).
 - Drop the launchd plist section.
 - Keep the BLE protocol section (still accurate).
-- Add "Where's the data?" → DevTools → Application → IndexedDB → `whoopfree`.
+- Add "Where's the data?" → DevTools → Application → IndexedDB → `whoof`.
 
 ### Task 4.5: Final smoke
 

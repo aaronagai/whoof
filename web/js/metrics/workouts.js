@@ -1,6 +1,6 @@
 // Auto-detect workouts from sustained elevated HR.
 //
-// Ported from whoopfree/workouts.py.
+// Ported from whoof/workouts.py.
 //
 // A workout is a contiguous period where the rolling-10-minute median HR sits
 // above 60% of max-HR AND we are not in the user's sleep window. Workouts
@@ -22,7 +22,7 @@ import {
   caloriesFromHrSeries,
 } from './zones.js';
 
-// Tunables -- match whoopfree/workouts.py.
+// Tunables -- match whoof/workouts.py.
 export const MIN_WORKOUT_MINUTES = 10;
 export const MERGE_GAP_MINUTES = 5;
 export const HR_FRACTION_THRESHOLD = 0.60; // of max HR

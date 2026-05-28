@@ -1,4 +1,4 @@
-"""Top-level CLI: `whoopfree <command>`.
+"""Top-level CLI: `whoof <command>`.
 
 Commands
 --------
@@ -36,7 +36,7 @@ def _setup_logging(verbose: bool) -> None:
 
 
 @click.group()
-@click.version_option(__version__, prog_name="whoopfree")
+@click.version_option(__version__, prog_name="whoof")
 @click.option("-v", "--verbose", is_flag=True)
 @click.option(
     "--db",
@@ -231,7 +231,7 @@ def seed_demo(ctx: click.Context, days: int, age: int, weight_kg: float, sex: st
     """Insert synthetic data so the dashboard shows realistic-looking trends.
 
     Useful for trying the UI before your first overnight recording. Run on a
-    throwaway DB path: `whoopfree --db /tmp/demo.db seed-demo`.
+    throwaway DB path: `whoof --db /tmp/demo.db seed-demo`.
 
     The generated data has realistic-looking nights (low HR + low motion in a
     bedtime → waketime band), a couple of workouts per week, and varied

@@ -10,7 +10,7 @@ import {
 } from '../../../web/js/data/queries.js';
 import { recomputeRecent } from '../../../web/js/metrics/rollup.js';
 
-const TEST_DB = 'whoopfree-backfill-test';
+const TEST_DB = 'whoof-backfill-test';
 
 function freshDb() {
   return new Promise((resolve) => {

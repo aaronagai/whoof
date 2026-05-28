@@ -1,5 +1,5 @@
 // In-browser shim that mimics the Python /api/* endpoints from
-// whoopfree/dashboard.py, but reads from IndexedDB instead of SQLite.
+// whoof/dashboard.py, but reads from IndexedDB instead of SQLite.
 //
 // Registers `window.whoopApi.handle(url, opts?)` → Promise<JSON>.
 // The legacy `fetchJSON` in app.js delegates to this when present so every

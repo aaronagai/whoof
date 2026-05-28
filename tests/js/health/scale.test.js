@@ -5,7 +5,7 @@ import {
   parseWeightMeasurement, setWeightManually,
 } from '../../../web/js/health/scale.js';
 
-const TEST_DB = 'whoopfree-scale-test';
+const TEST_DB = 'whoof-scale-test';
 
 function freshDb() {
   return new Promise((resolve) => {

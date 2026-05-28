@@ -1,4 +1,4 @@
-// HRV time-domain metrics ported from whoopfree/metrics.py.
+// HRV time-domain metrics ported from whoof/metrics.py.
 //
 // Standard published methods (Malik 1996, ESC/NASPE Task Force) so the
 // numbers are interpretable on their own even though they won't match

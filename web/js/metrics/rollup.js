@@ -2,7 +2,7 @@
 // Reads the day's samples from IndexedDB, runs every per-module metric,
 // writes the resulting daily_metrics row + per-day workouts + sleep_stages.
 //
-// Port of whoopfree/metrics.py::compute_daily (~lines 240-434).
+// Port of whoof/metrics.py::compute_daily (~lines 240-434).
 
 import {
   samplesInRange,

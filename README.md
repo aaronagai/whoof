@@ -1,4 +1,4 @@
-# whoopfree
+# whoof
 
 Use your Whoop 4.0 strap **without a subscription**. Reads heart rate, RR
 intervals, SpO2, and skin temperature straight off the band over Bluetooth
@@ -21,8 +21,8 @@ Built on top of open research from [`jogolden/whoomp`][whoomp] and
 |---|---|---|---|
 | **iPhone — phone-only, never want a Mac in the loop** | **[docs/IPHONE_BLUEFY.md](docs/IPHONE_BLUEFY.md)** — Bluefy browser + Cloudflare Pages. Pair the strap directly from iPhone | Free forever, no developer account | ~20 min |
 | **iPhone — happy to keep a Mac around as the hub** | [docs/IPHONE.md](docs/IPHONE.md) — install the PWA from Safari, pair on Mac, JSON export/import | Free, no developer account | 5 min |
-| **iPhone — want a polished native-app feel and have Xcode** | [docs/IPHONE_NATIVE.md](docs/IPHONE_NATIVE.md) — Capacitor wrap, free Apple-ID signing | Free but re-sign in Xcode every 7 days | 15 min |
 | **Mac Chrome, day-to-day dev** | Read on below | Free | 30 sec |
+| **iPhone — want a polished native-app feel and have Xcode** | See the [`ios-app` branch](../../tree/ios-app) — Capacitor wrap, free Apple-ID signing | Free but re-sign in Xcode every 7 days | 15 min |
 
 ---
 
@@ -41,7 +41,7 @@ browsers on Mac) at `http://localhost:8765/`. In the top-right panel:
 2. Click **Connect Whoop** — Chrome shows a device picker.
 3. Select your band.
 
-On every connect, whoopfree automatically:
+On every connect, whoof automatically:
 
 - Fetches the strap's identity, serial, and on-wrist state (`GET_HELLO`).
 - Compares the strap's RTC to your system clock and re-syncs if drifted (`SET_CLOCK`).
@@ -163,7 +163,8 @@ that round-trips through `shortcuts://x-callback-url`.
   standard BLE HR service (0x180D) so Strava / Zwift / Peloton / Apple
   Watch companions can pair with the strap as a regular HR monitor.
 - **Smart alarm** — set a wake time; the strap vibrates even if your phone
-  is in the other room. Set / Off / Test buttons in the alarm drawer.
+  is in the other room. Set / Off / Test from the **Wake Alarm card** on
+  the Overview tab.
 - **Bluetooth scale** — pairs directly with any standard Weight Scale Service
   (0x181D) scale (Beurer, A&D, some Withings). No app, no cloud.
 - **Apple Health weight sync** — poll via iPhone Shortcut or Health Auto Export.
@@ -199,7 +200,7 @@ serving the HTML/JS files.
 Everything lives in **IndexedDB** inside your browser — no server-side
 storage. To inspect it:
 
-*Chrome → DevTools (F12) → Application → Storage → IndexedDB → `whoopfree`*
+*Chrome → DevTools (F12) → Application → Storage → IndexedDB → `whoof`*
 
 You'll find these object stores:
 
@@ -242,7 +243,7 @@ of the metrics using textbook HRV and training-load formulas.
 
 Whoop 4.0 has internal flash that records 1 Hz HR + RR intervals continuously,
 even when no host is connected. The official Whoop app drains that buffer over
-BLE on next connection — and so does whoopfree.
+BLE on next connection — and so does whoof.
 
 The wire protocol is fully reverse-engineered: see
 [`docs/PROTOCOL.md`](docs/PROTOCOL.md) for the complete reference (73 commands,
@@ -312,7 +313,7 @@ instead of Safari.
 ## Project layout
 
 ```
-whoop/
+whoof/
 ├── web/
 │   ├── index.html          dashboard UI (Chart.js, v0.2 charts + BLE panel)
 │   ├── app.js              v0.2 dashboard render (reads from api-shim)
@@ -355,10 +356,10 @@ whoop/
 │           ├── seed.js     seedDemoData (14 days of synthetic data + journal)
 │           ├── capture.js  raw NDJSON packet recorder
 │           └── analyzer.js capture file analysis tool
-├── whoopfree/              Python package (HTTP server that serves web/)
+├── whoof/              Python package (HTTP server that serves web/)
 │   └── dashboard.py        stdlib http.server → serves web/
 ├── tests/
-│   ├── js/                 Vitest unit tests (258 tests, ~2.7 s)
+│   ├── js/                 Vitest unit tests (306 tests, ~2.5 s)
 │   └── *.py                Python metric tests (kept for reference)
 └── run.sh                  `./run.sh dash` starts the server
 ```

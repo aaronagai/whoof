@@ -1,6 +1,6 @@
 {
-  "name": "whoopfree",
-  "short_name": "whoopfree",
+  "name": "whoof",
+  "short_name": "whoof",
   "description": "Subscription-free Whoop 4.0 dashboard — recovery, strain, sleep, HRV. Runs entirely in your browser.",
   "start_url": "/",
   "scope": "/",

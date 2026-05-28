@@ -1,8 +1,8 @@
-# whoopfree v0.3 — Browser PWA
+# whoof v0.3 — Browser PWA
 
 Date: 2026-05-20
 Status: design approved, ready for implementation plan
-Supersedes (in part): `2026-05-20-whoopfree-redesign-design.md` (v0.2 Python+Mac dashboard)
+Supersedes (in part): `2026-05-20-whoof-redesign-design.md` (v0.2 Python+Mac dashboard)
 
 ## Goal
 
@@ -48,14 +48,14 @@ Network:      none after page load
 
 | v0.2 component | Fate in v0.3 |
 |---|---|
-| `whoopfree/db.py` (SQLite + helpers) | Replaced by `web/js/data/db.js` (IndexedDB) |
-| `whoopfree/dashboard.py` (HTTP API) | API routes deleted; static-file serving kept |
-| `whoopfree/recorder.py` (background BLE) | Deleted — browser does BLE |
-| `whoopfree/metrics.py` (HRV/recovery/strain) | Ported → `web/js/metrics/{hrv,recovery,strain}.js` |
-| `whoopfree/sleep.py` | Ported → `web/js/metrics/sleep.js` |
-| `whoopfree/zones.py` | Ported → `web/js/metrics/zones.js` |
-| `whoopfree/workouts.py` | Ported → `web/js/metrics/workouts.js` |
-| `whoopfree/cli.py` | Trimmed to `dash` only |
+| `whoof/db.py` (SQLite + helpers) | Replaced by `web/js/data/db.js` (IndexedDB) |
+| `whoof/dashboard.py` (HTTP API) | API routes deleted; static-file serving kept |
+| `whoof/recorder.py` (background BLE) | Deleted — browser does BLE |
+| `whoof/metrics.py` (HRV/recovery/strain) | Ported → `web/js/metrics/{hrv,recovery,strain}.js` |
+| `whoof/sleep.py` | Ported → `web/js/metrics/sleep.js` |
+| `whoof/zones.py` | Ported → `web/js/metrics/zones.js` |
+| `whoof/workouts.py` | Ported → `web/js/metrics/workouts.js` |
+| `whoof/cli.py` | Trimmed to `dash` only |
 | `vendor/whoop-reader` (Python BLE driver) | Reference only — not used at runtime |
 | `web/index.html` | Kept — minor edits (Connect button) |
 | `web/styles.css` | Kept as-is |
@@ -99,13 +99,13 @@ web/
     dev/
       seed.js             (port of seed-demo; hidden behind ?demo=1)
 
-whoopfree/                (trimmed Python)
+whoof/                (trimmed Python)
   cli.py                  (just `dash` — runs static_server)
   static_server.py        (renamed from dashboard.py; no API routes)
 ```
 
 Deprecated and removed from runtime path (kept on disk for reference until v0.3 ships):
-- `whoopfree/recorder.py`, `whoopfree/db.py`, `whoopfree/metrics.py`, `whoopfree/sleep.py`, `whoopfree/zones.py`, `whoopfree/workouts.py`
+- `whoof/recorder.py`, `whoof/db.py`, `whoof/metrics.py`, `whoof/sleep.py`, `whoof/zones.py`, `whoof/workouts.py`
 
 ## Schema (IndexedDB)
 

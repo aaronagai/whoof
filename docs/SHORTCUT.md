@@ -1,7 +1,7 @@
 # WhoopPullWeight Shortcut — Install Walkthrough
 
 A 30-second Apple Shortcut that reads your latest Body Mass from HealthKit
-and hands it back to the whoopfree PWA via `x-callback-url`. This is the
+and hands it back to the whoof PWA via `x-callback-url`. This is the
 "on-demand" weight sync path (the always-on path uses Health Auto Export;
 see the README's *Sync weight from Apple Health* section).
 
@@ -17,7 +17,7 @@ The Shortcut you install:
 
 1. Reads the most recent Body Mass sample from HealthKit.
 2. Builds a URL = `<callback>` with `?weight_from_shortcut=<value>` appended.
-3. Opens that URL → which pops your whoopfree tab back into focus with the
+3. Opens that URL → which pops your whoof tab back into focus with the
    weight in the query string. The PWA parses it, writes
    `profile.weight_kg` in IndexedDB, then strips the query param.
 
@@ -42,7 +42,7 @@ Open the **Shortcuts** app and tap the `+` in the top-right.
 
 - Action: **URL**
 - Tap the URL field, then tap **Shortcut Input** (this is the `x-success`
-  URL whoopfree passed in).
+  URL whoof passed in).
 - Append the literal text `?weight_from_shortcut=` and then the magic
   variable from Step 2.
 - The composed URL looks like:
@@ -60,7 +60,7 @@ the PWA looks for this name).
 
 ### Step 6 — Test it
 
-In the whoopfree panel tap **Pull from iPhone**. Safari/Bluefy → Shortcuts
+In the whoof panel tap **Pull from iPhone**. Safari/Bluefy → Shortcuts
 app opens briefly → bounces back → weight populates.
 
 ## Troubleshooting

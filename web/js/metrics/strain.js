@@ -1,7 +1,7 @@
 /**
  * Strain (cardiac load) calculations.
  *
- * Ported from whoopfree/metrics.py. Reproduces the spirit of Whoop's
+ * Ported from whoof/metrics.py. Reproduces the spirit of Whoop's
  * 0-21 strain scale from cardiovascular load without using the
  * proprietary algorithm.
  */

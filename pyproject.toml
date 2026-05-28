@@ -3,13 +3,13 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "whoopfree"
+name = "whoof"
 version = "0.1.0"
 description = "Use a Whoop 4.0 strap without a subscription — local SQLite logger, HRV/recovery/strain metrics, web dashboard."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
-authors = [{ name = "whoopfree" }]
+authors = [{ name = "whoof" }]
 keywords = ["whoop", "ble", "bluetooth", "hrv", "heart-rate", "fitness"]
 dependencies = [
   "whoop-reader>=0.1.0",
@@ -20,10 +20,10 @@ dependencies = [
 dev = ["pytest>=7", "pytest-asyncio>=0.21"]
 
 [project.scripts]
-whoopfree = "whoopfree.cli:cli"
+whoof = "whoof.cli:cli"
 
 [tool.hatch.build.targets.wheel]
-packages = ["whoopfree"]
+packages = ["whoof"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

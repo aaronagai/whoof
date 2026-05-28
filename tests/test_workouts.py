@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from datetime import date, datetime, time, timedelta, timezone
 
-from whoopfree import workouts
+from whoof import workouts
 
 
 class FakeRow(dict):

@@ -10,7 +10,7 @@ from pathlib import Path
 
 from whoop_reader.parser import RealtimePacket
 
-from whoopfree import db, metrics
+from whoof import db, metrics
 
 
 def _packet(hr: float, rr: int, seq: int = 0) -> RealtimePacket:

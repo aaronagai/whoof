@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# whoopfree — one-command setup.
+# whoof — one-command setup.
 # Creates a venv, installs everything, and prints next steps.
 set -euo pipefail
 

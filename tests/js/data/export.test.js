@@ -4,7 +4,7 @@ import { upsertDailyMetric } from '../../../web/js/data/queries.js';
 import { exportAllToJson, importAllFromJson, buildExportPayload, exportJournalCsv, exportWorkoutsCsv } from '../../../web/js/data/export.js';
 import { upsertJournalEntry, replaceWorkoutsForDate } from '../../../web/js/data/queries.js';
 
-const TEST_DB = 'whoopfree-export-test';
+const TEST_DB = 'whoof-export-test';
 
 function freshDb() {
   return new Promise((resolve) => {

@@ -1,10 +1,10 @@
 {
-	"appId": "com.whoopfree.dashboard",
-	"appName": "whoopfree",
+	"appId": "com.whoof.dashboard",
+	"appName": "whoof",
 	"webDir": "web",
 	"bundledWebRuntime": false,
 	"ios": {
-		"scheme": "whoopfree",
+		"scheme": "whoof",
 		"backgroundColor": "#07070AFF",
 		"contentInset": "automatic",
 		"scrollEnabled": true,
@@ -12,8 +12,8 @@
 		"preferredContentMode": "mobile"
 	},
 	"server": {
-		"iosScheme": "whoopfree",
-		"androidScheme": "whoopfree",
+		"iosScheme": "whoof",
+		"androidScheme": "whoof",
 		"cleartext": false
 	},
 	"plugins": {
