@@ -17,5 +17,11 @@ name = "getwhoof"
 compatibility_date = "2026-05-21"
 pages_build_output_dir = "./web"
 
+# R2 bucket holding E2E-encrypted sync snapshots (ciphertext only).
+# Bound as env.SYNC in functions/api/sync.js.
+[[r2_buckets]]
+binding = "SYNC"
+bucket_name = "whoof-sync"
+
 [observability]
 enabled = true
