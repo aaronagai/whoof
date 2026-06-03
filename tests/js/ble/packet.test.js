@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   WhoopPacket, PacketType, CommandNumber, EventNumber, MetadataType,
   buildCommandFrame, SOF,
+  buildV5CommandFrame, parseV5Frames, v5FrameToPacket, decodeV5,
 } from '../../../web/js/ble/packet.js';
 import { crc32Whoop, crc8 } from '../../../web/js/ble/crc.js';
 
@@ -85,6 +86,88 @@ describe('buildCommandFrame helper', () => {
   });
 });
 
+describe('WHOOP 5.0 (Puffin) framing', () => {
+  // The exact CLIENT_HELLO frame the strap expects. If buildV5CommandFrame
+  // diverges from this, the 5.0 handshake silently fails.
+  const CLIENT_HELLO = [
+    0xaa, 0x01, 0x08, 0x00, 0x00, 0x01, 0xe6, 0x71,
+    0x23, 0x01, 0x91, 0x01, 0x36, 0x3e, 0x5c, 0x8d,
+  ];
+
+  it('buildV5CommandFrame reproduces the canonical CLIENT_HELLO byte-for-byte', () => {
+    const frame = buildV5CommandFrame(1, 0x91, new Uint8Array([0x01]));
+    expect(Array.from(frame)).toEqual(CLIENT_HELLO);
+  });
+
+  it('frame layout: SOF, flag, LE length = paddedPayload+4, channel bytes', () => {
+    const frame = buildV5CommandFrame(0, CommandNumber.TOGGLE_REALTIME_HR, new Uint8Array([0x01]));
+    // payload [35, 0, 3, 1] is already 4-byte aligned → declaredLen = 4 + 4 = 8
+    expect(frame[0]).toBe(SOF);
+    expect(frame[1]).toBe(0x01);
+    expect(frame[2]).toBe(0x08);
+    expect(frame[3]).toBe(0x00);
+    expect(frame[4]).toBe(0x00);
+    expect(frame[5]).toBe(0x01);
+  });
+
+  it('zero-pads the payload to a 4-byte boundary', () => {
+    // payload [37, seq, cmd] = 3 bytes → 1 byte pad → 4; declaredLen = 8
+    const frame = buildV5CommandFrame(2, 0x07, new Uint8Array());
+    expect(frame[2]).toBe(0x08);
+    expect(frame.length).toBe(8 + 4 + 4);
+  });
+
+  it('round-trips build → v5FrameToPacket', () => {
+    const frame = buildV5CommandFrame(9, CommandNumber.GET_BATTERY_LEVEL, new Uint8Array([0xab, 0xcd]));
+    const pkt = v5FrameToPacket(frame);
+    expect(pkt.type).toBe(PacketType.COMMAND);
+    expect(pkt.seq).toBe(9);
+    expect(pkt.cmd).toBe(CommandNumber.GET_BATTERY_LEVEL);
+    // data carries the two real bytes plus zero padding to the 4-byte boundary
+    expect(Array.from(pkt.data.slice(0, 2))).toEqual([0xab, 0xcd]);
+  });
+
+  it('parseV5Frames splits a notification carrying several concatenated frames', () => {
+    const a = buildV5CommandFrame(0, 0x03, new Uint8Array([0x01]));
+    const b = buildV5CommandFrame(1, 0x1a, new Uint8Array([0x00]));
+    const joined = new Uint8Array([...a, ...b]);
+    const frames = parseV5Frames(joined);
+    expect(frames.length).toBe(2);
+    expect(decodeV5(joined).map(p => p.cmd)).toEqual([0x03, 0x1a]);
+  });
+
+  it('parseV5Frames resyncs past a malformed length and still finds the valid frame', () => {
+    // Leading [AA 01 00 00] has declaredLen 0 (<4) — must resync byte-by-byte,
+    // not abandon the rest of the notification.
+    const good = buildV5CommandFrame(3, 0x03, new Uint8Array([0x01]));
+    const noisy = new Uint8Array([0xaa, 0x01, 0x00, 0x00, ...good]);
+    const decoded = decodeV5(noisy);
+    expect(decoded.length).toBe(1);
+    expect(decoded[0].cmd).toBe(0x03);
+  });
+
+  it('v5FrameToPacket rejects a header CRC-16 mismatch', () => {
+    const frame = buildV5CommandFrame(1, 0x91, new Uint8Array([0x01]));
+    frame[6] ^= 0xff;
+    expect(v5FrameToPacket(frame)).toBeNull();
+  });
+
+  it('v5FrameToPacket rejects a payload CRC-32 mismatch', () => {
+    const frame = buildV5CommandFrame(1, 0x91, new Uint8Array([0x01]));
+    frame[frame.length - 1] ^= 0xff;
+    expect(v5FrameToPacket(frame)).toBeNull();
+  });
+
+  it('decodeV5 drops corrupt frames but keeps valid ones', () => {
+    const good = buildV5CommandFrame(0, 0x03, new Uint8Array([0x01]));
+    const bad = buildV5CommandFrame(1, 0x1a, new Uint8Array([0x00]));
+    bad[8] ^= 0xff;  // corrupt payload → CRC32 fails
+    const decoded = decodeV5(new Uint8Array([...good, ...bad]));
+    expect(decoded.length).toBe(1);
+    expect(decoded[0].cmd).toBe(0x03);
+  });
+});
+
 describe('protocol enums', () => {
   it('PacketType matches canonical values', () => {
     expect(PacketType.COMMAND).toBe(35);
@@ -92,6 +175,14 @@ describe('protocol enums', () => {
     expect(PacketType.HISTORICAL_DATA).toBe(47);
     expect(PacketType.EVENT).toBe(48);
     expect(PacketType.METADATA).toBe(49);
+  });
+
+  it('PacketType includes the 5.0 Puffin additions', () => {
+    expect(PacketType.PUFFIN_COMMAND).toBe(37);
+    expect(PacketType.PUFFIN_COMMAND_RESPONSE).toBe(38);
+    expect(PacketType.RELATIVE_PUFFIN_EVENTS).toBe(53);
+    expect(PacketType.PUFFIN_EVENTS_FROM_STRAP).toBe(54);
+    expect(PacketType.PUFFIN_METADATA).toBe(56);
   });
 
   it('MetadataType matches canonical values', () => {

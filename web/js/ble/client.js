@@ -12,13 +12,10 @@
 //
 // Auto-reconnects with exponential backoff on `gattserverdisconnected`.
 
-import {
-  SERVICE_UUID, CHAR_COMMAND_UUID, CHAR_RESPONSE_UUID,
-  CHAR_DATA_UUID, CHAR_EVENT_UUID,
-} from './uuids.js';
+import { FAMILIES } from './uuids.js';
 import {
   WhoopPacket, PacketType, CommandNumber, EventNumber, MetadataType,
-  buildCommandFrame,
+  EVENT_TYPES, METADATA_TYPES, buildCommandFrame, buildV5CommandFrame, decodeV5,
 } from './packet.js';
 import {
   decodePacket, parseBatteryResponse, parseClockResponse,
@@ -31,6 +28,15 @@ const RECONNECT_MAX_MS = 30000;
 const BATTERY_POLL_MS = 60000;
 const RTC_DRIFT_THRESHOLD_S = 5;
 const META_QUEUE_TIMEOUT_MS = 30000;
+
+// WHOOP 5.0 connect preamble. The strap ignores all commands until this
+// CLIENT_HELLO (cmd 0x91 = GET_HELLO, capabilities byte 0x01) is written to the
+// command characteristic. Identical to buildV5CommandFrame(1, 0x91, [0x01]);
+// kept as a literal so a framing regression can't silently break the handshake.
+const CLIENT_HELLO_V5 = new Uint8Array([
+  0xaa, 0x01, 0x08, 0x00, 0x00, 0x01, 0xe6, 0x71,
+  0x23, 0x01, 0x91, 0x01, 0x36, 0x3e, 0x5c, 0x8d,
+]);
 
 /**
  * Tiny async queue used to feed METADATA packets from the data-channel
@@ -92,6 +98,7 @@ export class WhoopClient {
     this._historicalDumpInFlight = false;
     this._disconnectHandler = null;
     this._state = 'disconnected';
+    this._family = 'whoop4';   // resolved per-connection from the discovered service
 
     // Cached strap state surfaced to the UI:
     this.charging = null;
@@ -112,8 +119,12 @@ export class WhoopClient {
   async requestAndConnect() {
     this._intentionalDisconnect = false;
     this.device = await navigator.bluetooth.requestDevice({
-      filters: [{ services: [SERVICE_UUID] }, { namePrefix: 'WHOOP' }],
-      optionalServices: [SERVICE_UUID],
+      filters: [
+        { services: [FAMILIES.whoop5.service] },
+        { services: [FAMILIES.whoop4.service] },
+        { namePrefix: 'WHOOP' },
+      ],
+      optionalServices: [FAMILIES.whoop5.service, FAMILIES.whoop4.service],
     });
     this._attachDisconnectHandler();
     await this._connect();
@@ -141,11 +152,28 @@ export class WhoopClient {
   async _connect() {
     this._setState('connecting');
     this.server = await this.device.gatt.connect();
-    const service = await this.server.getPrimaryService(SERVICE_UUID);
-    this.charCmd   = await service.getCharacteristic(CHAR_COMMAND_UUID);
-    this.charResp  = await service.getCharacteristic(CHAR_RESPONSE_UUID);
-    this.charData  = await service.getCharacteristic(CHAR_DATA_UUID);
-    this.charEvent = await service.getCharacteristic(CHAR_EVENT_UUID);
+
+    // Detect the strap generation: probe the 5.0 service first, fall back to
+    // 4.0 only when that service is genuinely absent (NotFoundError). Any other
+    // failure (mid-connection GATT error, power event) must propagate, not be
+    // mistaken for "this is a 4.0 strap" — that would send 4.0 frames to a 5.0
+    // device and silently break the session.
+    let service;
+    try {
+      service = await this.server.getPrimaryService(FAMILIES.whoop5.service);
+      this._family = 'whoop5';
+    } catch (err) {
+      if (err && err.name && err.name !== 'NotFoundError') throw err;
+      service = await this.server.getPrimaryService(FAMILIES.whoop4.service);
+      this._family = 'whoop4';
+    }
+    const f = FAMILIES[this._family];
+    this._emit('family', { family: this._family, name: f.name });
+
+    this.charCmd   = await service.getCharacteristic(f.command);
+    this.charResp  = await service.getCharacteristic(f.response);
+    this.charData  = await service.getCharacteristic(f.data);
+    this.charEvent = await service.getCharacteristic(f.event);
 
     this.charData.addEventListener('characteristicvaluechanged', (e) => this._onData(e));
     await this.charData.startNotifications();
@@ -155,6 +183,15 @@ export class WhoopClient {
 
     this.charEvent.addEventListener('characteristicvaluechanged', (e) => this._onEvent(e));
     await this.charEvent.startNotifications();
+
+    // 5.0 straps ignore every command until this CLIENT_HELLO lands, so a failed
+    // write means a dead session — let it propagate so _connect rejects and the
+    // reconnect backoff retries, rather than limping on with a strap that
+    // silently drops all subsequent commands.
+    if (this._family === 'whoop5') {
+      await this.charCmd.writeValue(CLIENT_HELLO_V5);
+      this._clientHelloSent = true;
+    }
 
     this.connected = true;
     this._reconnectBackoff = RECONNECT_INITIAL_MS;
@@ -247,12 +284,24 @@ export class WhoopClient {
 
   // ----- notification handlers --------------------------------------------
 
-  _onData(e) {
+  // Decode a raw notification into WhoopPackets. A 4.0 notification is a single
+  // framed packet; a 5.0 notification may concatenate several Puffin frames.
+  // Returns { packets, error } — error is only set on the 4.0 single-frame path
+  // so _onData can surface it exactly as before.
+  _decodeNotification(e) {
     const v = bytesOf(e.target.value);
-    let pkt;
-    try { pkt = WhoopPacket.fromData(v); }
-    catch (err) { this._emit('error', err); return; }
+    if (this._family === 'whoop5') return { packets: decodeV5(v) };
+    try { return { packets: [WhoopPacket.fromData(v)] }; }
+    catch (error) { return { packets: [], error }; }
+  }
 
+  _onData(e) {
+    const { packets, error } = this._decodeNotification(e);
+    if (error) { this._emit('error', error); return; }
+    for (const pkt of packets) this._handleDataPacket(pkt);
+  }
+
+  _handleDataPacket(pkt) {
     switch (pkt.type) {
       case PacketType.REALTIME_DATA: {
         const decoded = decodePacket(pkt);
@@ -266,7 +315,9 @@ export class WhoopClient {
         } catch (err) { this._emit('error', err); }
         break;
       }
-      case PacketType.METADATA: {
+      case PacketType.METADATA:
+      case PacketType.PUFFIN_METADATA: {
+        // PUFFIN_METADATA (5.0) is the history-end signal, same as METADATA.
         const meta = decodePacket(pkt);
         this._metaQueue.push(meta);
         this._emit('metadata', meta);
@@ -290,10 +341,11 @@ export class WhoopClient {
   }
 
   _onResponse(e) {
-    const v = bytesOf(e.target.value);
-    let pkt;
-    try { pkt = WhoopPacket.fromData(v); }
-    catch { return; }
+    const { packets } = this._decodeNotification(e);
+    for (const pkt of packets) this._handleResponsePacket(pkt);
+  }
+
+  _handleResponsePacket(pkt) {
     // Cache the well-known responses for callers waiting on them.
     if (pkt.cmd === CommandNumber.GET_BATTERY_LEVEL) {
       const pct = parseBatteryResponse(pkt.data);
@@ -314,11 +366,12 @@ export class WhoopClient {
   }
 
   _onEvent(e) {
-    const v = bytesOf(e.target.value);
-    let pkt;
-    try { pkt = WhoopPacket.fromData(v); }
-    catch { return; }
-    if (pkt.type !== PacketType.EVENT) return;
+    const { packets } = this._decodeNotification(e);
+    for (const pkt of packets) this._handleEventPacket(pkt);
+  }
+
+  _handleEventPacket(pkt) {
+    if (!EVENT_TYPES.includes(pkt.type)) return;
     const evt = decodePacket(pkt);
 
     // Surface state-relevant ones onto the client itself + emit:
@@ -343,7 +396,9 @@ export class WhoopClient {
 
   async _sendCommand(cmd, payload = new Uint8Array()) {
     if (!this.charCmd) throw new Error('Not connected');
-    const frame = buildCommandFrame(cmd, payload, this._seq);
+    const frame = this._family === 'whoop5'
+      ? buildV5CommandFrame(this._seq, cmd, payload)
+      : buildCommandFrame(cmd, payload, this._seq);
     this._seq = (this._seq + 1) & 0xff;
     await this.charCmd.writeValue(frame);
   }

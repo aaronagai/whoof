@@ -5,8 +5,29 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { WhoopClient } from '../../../web/js/ble/client.js';
 import {
-  WhoopPacket, PacketType, CommandNumber, MetadataType, EventNumber,
+  WhoopPacket, PacketType, CommandNumber, MetadataType, EventNumber, decodeV5,
 } from '../../../web/js/ble/packet.js';
+import { crc16Modbus, crc32Whoop } from '../../../web/js/ble/crc.js';
+
+/** Frame an arbitrary 5.0 (Puffin) payload [type,seq,cmd,...body] for fire(). */
+function v5Frame(type, seq, cmd, body = new Uint8Array()) {
+  const raw = new Uint8Array([type, seq, cmd, ...body]);
+  const padLen = (4 - (raw.length % 4)) % 4;
+  const payload = new Uint8Array(raw.length + padLen);
+  payload.set(raw);
+  const declaredLen = payload.length + 4;
+  const header = new Uint8Array([0xaa, 0x01, declaredLen & 0xff, (declaredLen >> 8) & 0xff, 0x00, 0x01]);
+  const hdrCrc = crc16Modbus(header);
+  const payCrc = crc32Whoop(payload);
+  const frame = new Uint8Array(8 + payload.length + 4);
+  frame.set(header);
+  frame[6] = hdrCrc & 0xff; frame[7] = (hdrCrc >> 8) & 0xff;
+  frame.set(payload, 8);
+  const o = 8 + payload.length;
+  frame[o] = payCrc & 0xff; frame[o + 1] = (payCrc >>> 8) & 0xff;
+  frame[o + 2] = (payCrc >>> 16) & 0xff; frame[o + 3] = (payCrc >>> 24) & 0xff;
+  return frame;
+}
 
 /** Build a framed METADATA packet for the dump state machine. */
 function metaFrame(kind, { unix = 0, trim = 0 } = {}) {
@@ -66,24 +87,35 @@ function makeCharacteristic() {
   };
 }
 
-function makeFakeDevice() {
+// UUID-aware fake: getPrimaryService throws for the service UUID the device
+// doesn't expose (like a real strap), so the client's whoop5→whoop4 probe
+// falls back correctly. Pass 'whoop5' to simulate a Puffin strap.
+function makeFakeDevice(family = 'whoop4') {
+  const slots = family === 'whoop5'
+    ? { svc: 'fd4b0001', cmd: 'fd4b0002', resp: 'fd4b0003', event: 'fd4b0004', data: 'fd4b0005' }
+    : { svc: '61080001', cmd: '61080002', resp: '61080003', event: '61080004', data: '61080005' };
   const cmd = makeCharacteristic();
   const resp = makeCharacteristic();
   const data = makeCharacteristic();
   const event = makeCharacteristic();
   const service = {
     getCharacteristic: vi.fn(async (uuid) => {
-      if (uuid.startsWith('61080002')) return cmd;
-      if (uuid.startsWith('61080003')) return resp;
-      if (uuid.startsWith('61080004')) return event;
-      if (uuid.startsWith('61080005')) return data;
+      if (uuid.startsWith(slots.cmd)) return cmd;
+      if (uuid.startsWith(slots.resp)) return resp;
+      if (uuid.startsWith(slots.event)) return event;
+      if (uuid.startsWith(slots.data)) return data;
       throw new Error('unknown UUID ' + uuid);
     }),
   };
   const gatt = {
     connected: true,
     connect: vi.fn(async () => ({
-      getPrimaryService: vi.fn(async () => service),
+      getPrimaryService: vi.fn(async (uuid) => {
+        if (uuid.startsWith(slots.svc)) return service;
+        // Web Bluetooth rejects an absent service with a NotFoundError; the
+        // client only falls back to 4.0 on exactly that error name.
+        throw Object.assign(new Error('no such service ' + uuid), { name: 'NotFoundError' });
+      }),
       connected: true,
       disconnect: vi.fn(),
     })),
@@ -246,6 +278,87 @@ describe('WhoopClient mocked BLE', () => {
     expect(errors).toHaveLength(1);
     expect(errors[0].message).toMatch(/disconnect/);
     expect(client._historicalDumpInFlight).toBe(false);
+  });
+
+  describe('WHOOP 5.0 family detection', () => {
+    const CLIENT_HELLO = [
+      0xaa, 0x01, 0x08, 0x00, 0x00, 0x01, 0xe6, 0x71,
+      0x23, 0x01, 0x91, 0x01, 0x36, 0x3e, 0x5c, 0x8d,
+    ];
+
+    it('detects a 5.0 strap and writes CLIENT_HELLO first', async () => {
+      const dev5 = makeFakeDevice('whoop5');
+      const c = new WhoopClient();
+      await c.connectToDevice(dev5);
+      expect(c._family).toBe('whoop5');
+      expect(Array.from(dev5._chars.cmd.writes[0])).toEqual(CLIENT_HELLO);
+    });
+
+    it('falls back to 4.0 when the 5.0 service is absent', async () => {
+      const dev4 = makeFakeDevice('whoop4');
+      const c = new WhoopClient();
+      await c.connectToDevice(dev4);
+      expect(c._family).toBe('whoop4');
+      // No CLIENT_HELLO on 4.0.
+      expect(dev4._chars.cmd.writes[0] && Array.from(dev4._chars.cmd.writes[0])).not.toEqual(CLIENT_HELLO);
+    });
+
+    it('propagates a non-NotFoundError from the 5.0 probe instead of mis-detecting as 4.0', async () => {
+      const dev = makeFakeDevice('whoop4');
+      const origConnect = dev.gatt.connect;
+      dev.gatt.connect = vi.fn(async () => {
+        const server = await origConnect();
+        const realGet = server.getPrimaryService;
+        server.getPrimaryService = vi.fn(async (uuid) => {
+          if (uuid.startsWith('fd4b0001')) throw Object.assign(new Error('GATT busy'), { name: 'NetworkError' });
+          return realGet(uuid);
+        });
+        return server;
+      });
+      const c = new WhoopClient();
+      await expect(c.connectToDevice(dev)).rejects.toThrow(/GATT busy/);
+    });
+
+    it('decodes a V5-framed realtime sample through the same sample path', async () => {
+      const dev5 = makeFakeDevice('whoop5');
+      const c = new WhoopClient();
+      await c.connectToDevice(dev5);
+      const samples = [];
+      c.on('sample', (s) => samples.push(s));
+      const payload = new Uint8Array(32);
+      payload[5] = 72; payload[6] = 1; payload[7] = 850 & 0xff; payload[8] = (850 >> 8) & 0xff;
+      dev5._chars.data.fire(v5Frame(PacketType.REALTIME_DATA, 0, 0, payload));
+      expect(samples).toHaveLength(1);
+      expect(samples[0].heartRateBpm).toBe(72);
+      expect(samples[0].rrIntervalsMs).toEqual([850]);
+    });
+
+    it('sends V5-framed commands on a 5.0 strap', async () => {
+      const dev5 = makeFakeDevice('whoop5');
+      const c = new WhoopClient();
+      await c.connectToDevice(dev5);
+      const before = dev5._chars.cmd.writes.length;
+      await c.getBatteryLevel();
+      const cmds = dev5._chars.cmd.writes.slice(before).flatMap(w => decodeV5(w)).map(p => p.cmd);
+      expect(cmds).toContain(CommandNumber.GET_BATTERY_LEVEL);
+      // and they are genuinely V5 frames (SOF + flag), not 4.0 frames
+      const w = dev5._chars.cmd.writes[before];
+      expect(w[0]).toBe(0xaa); expect(w[1]).toBe(0x01);
+    });
+
+    it('routes a V5 PUFFIN_METADATA history-end into the dump queue', async () => {
+      const dev5 = makeFakeDevice('whoop5');
+      const c = new WhoopClient();
+      await c.connectToDevice(dev5);
+      const metas = [];
+      c.on('metadata', (m) => metas.push(m));
+      const body = new Uint8Array(14);
+      body[10] = 7;  // trim
+      dev5._chars.data.fire(v5Frame(PacketType.PUFFIN_METADATA, 0, MetadataType.HISTORY_END, body));
+      expect(metas).toHaveLength(1);
+      expect(metas[0].kind).toBe('historyEnd');
+      expect(metas[0].trim).toBe(7);
+    });
   });
 
   describe('command helpers send the right cmd byte', () => {

@@ -47,6 +47,20 @@ export function crc8(data) {
   return crc;
 }
 
+// CRC-16/Modbus (poly 0xA001, init 0xFFFF, no final XOR). Whoop 5.0 (Puffin)
+// frames protect their 6-byte header with this instead of the 4.0 CRC-8.
+// Verified against the device CLIENT_HELLO header [aa 01 08 00 00 01] → 0x71e6.
+export function crc16Modbus(data) {
+  let crc = 0xffff;
+  for (const byte of data) {
+    crc ^= byte;
+    for (let i = 0; i < 8; i++) {
+      crc = (crc & 1) ? ((crc >>> 1) ^ 0xa001) : (crc >>> 1);
+    }
+  }
+  return crc & 0xffff;
+}
+
 export function verifyCrc(data, expected) {
   return crc32Whoop(data) === (expected >>> 0);
 }

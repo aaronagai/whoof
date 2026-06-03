@@ -9,15 +9,26 @@
 // plus trailing 4-byte CRC32). The host distinguishes packet sources by the
 // `type` byte (PacketType enum).
 
-import { crc32Whoop as crc32, crc8 } from './crc.js';
+import { crc32Whoop as crc32, crc8, crc16Modbus } from './crc.js';
 
 export const SOF = 0xaa;
+
+// WHOOP 5.0 (Puffin) frame constants. The header gained a version flag and a
+// 2-byte channel field, and swapped the 4.0 CRC-8 for CRC-16/Modbus:
+//   [SOF=0xAA][0x01][len_lo][len_hi][0x00][0x01][crc16_lo][crc16_hi][payload…][crc32_le]
+// `len` (LE u16) = paddedPayloadLen + 4; payload is zero-padded to a 4-byte
+// boundary before the CRC-32 is taken.
+export const V5_FLAG = 0x01;
+export const V5_CHANNEL = Object.freeze([0x00, 0x01]);
 
 // ---------------- Enums ----------------------------------------------------
 
 export const PacketType = Object.freeze({
   COMMAND: 35,
   COMMAND_RESPONSE: 36,
+  // 5.0 "Puffin" command path — mirror of 35/36 over the fd4b service.
+  PUFFIN_COMMAND: 37,
+  PUFFIN_COMMAND_RESPONSE: 38,
   REALTIME_DATA: 40,
   REALTIME_RAW_DATA: 43,
   HISTORICAL_DATA: 47,
@@ -26,7 +37,23 @@ export const PacketType = Object.freeze({
   CONSOLE_LOGS: 50,
   REALTIME_IMU_DATA_STREAM: 51,
   HISTORICAL_IMU_DATA_STREAM: 52,
+  // 5.0 additions. Events parse like 48; PUFFIN_METADATA marks history-end
+  // exactly like 49 and MUST feed the same metadata queue.
+  RELATIVE_PUFFIN_EVENTS: 53,
+  PUFFIN_EVENTS_FROM_STRAP: 54,
+  RELATIVE_BATTERY_PACK_CONSOLE_LOGS: 55,
+  PUFFIN_METADATA: 56,
 });
+
+// Packet types that carry strap-side events, across both generations.
+export const EVENT_TYPES = Object.freeze([
+  PacketType.EVENT, PacketType.RELATIVE_PUFFIN_EVENTS, PacketType.PUFFIN_EVENTS_FROM_STRAP,
+]);
+
+// Packet types that carry history metadata (and thus drive the dump loop).
+export const METADATA_TYPES = Object.freeze([
+  PacketType.METADATA, PacketType.PUFFIN_METADATA,
+]);
 
 export const MetadataType = Object.freeze({
   HISTORY_START: 1,
@@ -256,4 +283,96 @@ export class WhoopPacket {
 /** Helper: build a host→strap COMMAND packet, framed. */
 export function buildCommandFrame(cmd, payload = new Uint8Array(), seq = 0) {
   return new WhoopPacket(PacketType.COMMAND, seq, cmd, payload).framed();
+}
+
+// ---------------- WHOOP 5.0 (Puffin) frames --------------------------------
+
+/**
+ * Build a host→strap 5.0 command frame. Payload = [type=COMMAND(0x23), seq,
+ * cmd, ...data], zero-padded to a 4-byte boundary, CRC-32 over the padded
+ * payload, CRC-16/Modbus over the 6-byte header. The 5.0 difference from 4.0 is
+ * the frame header, not the payload type byte — the command type is still
+ * COMMAND(35), as proven by the CLIENT_HELLO vector below.
+ *
+ * buildV5CommandFrame(1, 0x91, [0x01]) reproduces the device CLIENT_HELLO frame
+ * byte-for-byte — the canonical test vector.
+ */
+export function buildV5CommandFrame(seq, cmd, data = new Uint8Array()) {
+  const raw = new Uint8Array(3 + data.length);
+  raw[0] = PacketType.COMMAND;
+  raw[1] = seq & 0xff;
+  raw[2] = cmd & 0xff;
+  raw.set(data, 3);
+
+  const padLen = (4 - (raw.length % 4)) % 4;
+  const payload = new Uint8Array(raw.length + padLen);
+  payload.set(raw);
+
+  const declaredLen = payload.length + 4;
+  const header = new Uint8Array([SOF, V5_FLAG, declaredLen & 0xff, (declaredLen >> 8) & 0xff, V5_CHANNEL[0], V5_CHANNEL[1]]);
+  const hdrCrc = crc16Modbus(header);
+  const payCrc = crc32(payload);
+
+  const frame = new Uint8Array(8 + payload.length + 4);
+  frame.set(header);
+  frame[6] = hdrCrc & 0xff;
+  frame[7] = (hdrCrc >> 8) & 0xff;
+  frame.set(payload, 8);
+  const o = 8 + payload.length;
+  frame[o]     = payCrc & 0xff;
+  frame[o + 1] = (payCrc >>> 8) & 0xff;
+  frame[o + 2] = (payCrc >>> 16) & 0xff;
+  frame[o + 3] = (payCrc >>> 24) & 0xff;
+  return frame;
+}
+
+/**
+ * Split a raw 5.0 notification (which may concatenate several frames) into
+ * individual frame byte-slices. Resyncs on the next 0xAA 0x01 if a frame looks
+ * malformed.
+ */
+export function parseV5Frames(raw) {
+  const data = raw instanceof Uint8Array ? raw : new Uint8Array(raw);
+  const frames = [];
+  let i = 0;
+  while (i + 8 <= data.length) {
+    if (data[i] !== SOF || data[i + 1] !== V5_FLAG) { i++; continue; }
+    const declaredLen = data[i + 2] | (data[i + 3] << 8);
+    const total = 8 + declaredLen;          // header(8) + payload(declaredLen-4) + crc32(4)
+    // Bad length or a frame that overruns the buffer: resync on the next
+    // 0xAA 0x01 rather than abandoning every later frame in this notification.
+    if (declaredLen < 4 || i + total > data.length) { i++; continue; }
+    frames.push(data.subarray(i, i + total));
+    i += total;
+  }
+  return frames;
+}
+
+/**
+ * Validate one 5.0 frame and decode it into a WhoopPacket (type/seq/cmd/data),
+ * so all downstream 4.0 decoders work unchanged. Returns null on CRC failure.
+ */
+export function v5FrameToPacket(frame) {
+  const f = frame instanceof Uint8Array ? frame : new Uint8Array(frame);
+  if (f.length < 12 || f[0] !== SOF || f[1] !== V5_FLAG) return null;
+  const declaredLen = f[2] | (f[3] << 8);
+  if (f.length < 8 + declaredLen) return null;
+  if (crc16Modbus(f.subarray(0, 6)) !== (f[6] | (f[7] << 8))) return null;
+
+  const payload = f.subarray(8, 8 + declaredLen - 4);
+  const expectedCrc = (f[8 + declaredLen - 4] | (f[8 + declaredLen - 3] << 8) |
+                       (f[8 + declaredLen - 2] << 16) | (f[8 + declaredLen - 1] << 24)) >>> 0;
+  if (crc32(payload) !== expectedCrc) return null;
+  if (payload.length < 3) return null;
+  return new WhoopPacket(payload[0], payload[1], payload[2], payload.slice(3));
+}
+
+/** Decode a raw 5.0 notification into zero or more valid WhoopPackets. */
+export function decodeV5(raw) {
+  const out = [];
+  for (const frame of parseV5Frames(raw)) {
+    const pkt = v5FrameToPacket(frame);
+    if (pkt) out.push(pkt);
+  }
+  return out;
 }

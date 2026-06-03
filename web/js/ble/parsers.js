@@ -252,8 +252,11 @@ export function decodePacket(pkt) {
     case PacketType.HISTORICAL_DATA:
       return parseHistorical(pkt.data);
     case PacketType.METADATA:
+    case PacketType.PUFFIN_METADATA:
       return parseMetadata(pkt.cmd, pkt.data);
     case PacketType.EVENT:
+    case PacketType.RELATIVE_PUFFIN_EVENTS:
+    case PacketType.PUFFIN_EVENTS_FROM_STRAP:
       return parseEvent(pkt.cmd, pkt.data);
     case PacketType.COMMAND_RESPONSE:
       return { type: 'response', cmd: pkt.cmd, data: pkt.data };
