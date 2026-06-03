@@ -6,7 +6,6 @@ import { WhoopClient } from './ble/client.js';
 import { openDb } from './data/db.js';
 import { insertSamplesBatch, startSession, endSession, logEvent } from './data/queries.js';
 import { isoUtcNow } from './util/time.js';
-import { seedDemoData } from './dev/seed.js';
 import { exportAllToJson, importAllFromJson, exportSamplesCsv, exportDailyMetricsCsv, exportJournalCsv, exportWorkoutsCsv } from './data/export.js';
 import {
   startHealthPolling, readShortcutResult, triggerWeightShortcut, buildIngestUrl,
@@ -352,38 +351,13 @@ async function autoConnect() {
   }
 }
 
-autoConnect();
-
-// ----- First-visit / stale-data demo seed ---------------------------------
-// IndexedDB starts empty on a fresh browser profile. Rather than show blank
-// rings, we auto-seed 14 days of synthetic data. We also treat the DB as
-// "needs seeding" if the most recent sample is more than 7 days old — that
-// way the dashboard recovers from stale demo data left over from previous
-// sessions (e.g. seeded on a different day, page abandoned, opened again
-// weeks later).
-//
-// If the user connects an actual strap or imports a real export, that data
-// is fresh and will keep auto-seed dormant.
-
-const STALE_DEMO_THRESHOLD_HOURS = 24 * 7;
-
-async function latestSampleAgeHours(d) {
-  return await new Promise((resolve, reject) => {
-    const idx = d.transaction('samples').objectStore('samples').index('ts_utc');
-    const req = idx.openCursor(null, 'prev');
-    req.onsuccess = () => {
-      const v = req.result?.value;
-      if (!v) { resolve(null); return; }
-      const t = new Date(v.ts_utc).getTime();
-      if (!Number.isFinite(t)) { resolve(null); return; }
-      resolve((Date.now() - t) / 3600000);
-    };
-    req.onerror = () => reject(req.error);
-  });
-}
+// ----- Demo-data removal ---------------------------------------------------
+// Auto-seeding has been removed: a fresh/empty IndexedDB now stays empty until
+// you connect a WHOOP or import Apple Health. purgeDemoOnce() (below) also
+// clears any synthetic demo data left in a returning browser.
 
 async function clearAllStores(d) {
-  const stores = ['samples', 'sessions', 'device_events', 'daily_metrics', 'sleep_stages', 'workouts'];
+  const stores = ['samples', 'sessions', 'device_events', 'daily_metrics', 'profile', 'sleep_stages', 'workouts', 'captures', 'journal'];
   for (const s of stores) {
     if (!d.objectStoreNames.contains(s)) continue;
     await new Promise((resolve, reject) => {
@@ -396,60 +370,66 @@ async function clearAllStores(d) {
   }
 }
 
-async function seedIfEmptyOrStale() {
+// One-time removal of the synthetic demo dataset from a returning browser.
+// Runs once (guarded by a localStorage flag) and ONLY wipes a database that is
+// purely demo — every session is a 'demo …' session (the old synthetic seeder's
+// label), with no real strap ('mvp-session') or imported recordings. If any real session
+// exists the DB is left completely untouched, so a real recording is never
+// destroyed. Returns true if it cleared anything.
+async function purgeDemoOnce() {
+  const FLAG = 'whoofDemoPurgedV1';
+  try { if (localStorage.getItem(FLAG)) return false; } catch { return false; }
   if (!db) db = await openDb();
-  const tx = db.transaction('samples');
-  const count = await new Promise((resolve, reject) => {
-    const req = tx.objectStore('samples').count();
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
 
-  let reason = null;
-  if (count === 0) {
-    reason = 'empty';
-  } else {
-    const ageH = await latestSampleAgeHours(db);
-    if (ageH !== null && ageH > STALE_DEMO_THRESHOLD_HOURS) {
-      reason = `stale (${Math.round(ageH / 24)}d old)`;
-      // Wipe the stale data first — otherwise we'd be appending fresh
-      // demo data alongside old days and cluttering the trends.
-      setDataStatus(`Clearing stale demo data (${Math.round(ageH / 24)}d old)…`);
-      await clearAllStores(db);
-    }
-  }
-  if (reason === null) return false;
-
-  setDataStatus(`Seeding 14 days of demo data (${reason})…`);
+  let sessions = [];
   try {
-    await seedDemoData({
-      days: 14,
-      onProgress: ({ date }) => setDataStatus(`Seeding… ${date}`),
+    sessions = await new Promise((resolve, reject) => {
+      const req = db.transaction('sessions').objectStore('sessions').getAll();
+      req.onsuccess = () => resolve(req.result ?? []);
+      req.onerror = () => reject(req.error);
     });
-    setDataStatus('Demo data ready — connect your Whoop to record real data', 'var(--rec-good)');
-    return true;
-  } catch (err) {
-    console.error('[mvp] seed failed', err);
-    setDataStatus('Seed failed: ' + (err.message ?? err), 'var(--rec-bad)');
-    return false;
+  } catch { sessions = []; }
+
+  const isDemo = (s) => typeof s.label === 'string' && s.label.startsWith('demo ');
+  const demoCount = sessions.filter(isDemo).length;
+  const realCount = sessions.length - demoCount;
+
+  // Set the run-once flag BEFORE wiping so a slow autoConnect()/startSession
+  // can't re-enter this path and a setItem failure can't trigger a re-wipe.
+  try { localStorage.setItem(FLAG, '1'); } catch {}
+
+  let cleared = false;
+  if (demoCount > 0 && realCount === 0) {
+    setDataStatus('Removing demo data…');
+    await clearAllStores(db);
+    cleared = true;
   }
+  return cleared;
 }
 
 (async () => {
-  const seeded = await seedIfEmptyOrStale();
-  if (seeded) {
-    // Re-render the visible tab now that data exists.
-    if (typeof window.refreshAll === 'function') {
-      window.refreshAll();
-    } else {
-      // app.js sets up its own polling; nudge it.
-      window.dispatchEvent(new Event('whoop-data-changed'));
-    }
+  // Purge any leftover demo data to completion BEFORE auto-connecting, so a
+  // real 'mvp-session' created by autoConnect() can never land mid-purge.
+  const cleared = await purgeDemoOnce();
+  autoConnect();
+  if (cleared) {
+    // Re-render the visible tab now that the demo data is gone.
+    if (typeof window.refreshAll === 'function') window.refreshAll();
+    else window.dispatchEvent(new Event('whoop-data-changed'));
   }
-  // Always refresh the data-health indicator, insights, plan, and trend-tab
-  // panels after seed/skip.  This is the right moment: DB is open and data is
-  // in a consistent state.  Running here (vs a bare module-level call) avoids
-  // the race where these functions fire while seedDemoData is mid-insert.
+
+  // Empty-state hint: with auto-seed gone, an untouched DB is blank — point the
+  // user at the real ingest paths instead of leaving a silent empty dashboard.
+  try {
+    if (!db) db = await openDb();
+    const n = await new Promise((res, rej) => {
+      const r = db.transaction('samples').objectStore('samples').count();
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    });
+    if (n === 0) setDataStatus('No data yet — connect your WHOOP or import Apple Health.');
+  } catch { /* non-fatal */ }
+
+  // Refresh the data-health indicator, insights, plan, and trend-tab panels.
   await Promise.all([
     refreshHealth(),
     renderInsights(),
@@ -461,22 +441,13 @@ async function seedIfEmptyOrStale() {
   ]);
 })();
 
-// Exposed so a "Reset & re-seed" button or dev console can force a refresh.
-window.resetAndReseed = async () => {
+// Exposed so the Reset button (or dev console) can wipe all local data. No
+// demo reseed — the dashboard stays empty until real data is recorded/imported.
+window.resetAllData = async () => {
   if (!db) db = await openDb();
   setDataStatus('Wiping all local data…');
   await clearAllStores(db);
-  setDataStatus('Re-seeding…');
-  try {
-    await seedDemoData({
-      days: 14,
-      onProgress: ({ date }) => setDataStatus(`Seeding… ${date}`),
-    });
-    setDataStatus('Fresh demo data ready', 'var(--rec-good)');
-  } catch (err) {
-    setDataStatus('Re-seed failed: ' + (err.message ?? err), 'var(--rec-bad)');
-    return;
-  }
+  setDataStatus('All local data cleared — connect your WHOOP or import Apple Health.', 'var(--rec-good)');
   if (typeof window.refreshAll === 'function') window.refreshAll();
   else window.dispatchEvent(new Event('whoop-data-changed'));
 };
@@ -1091,12 +1062,12 @@ const resetBtn = $('mvp-reset');
 if (resetBtn) {
   resetBtn.addEventListener('click', async () => {
     const ok = confirm(
-      'Wipe ALL local data (including any real strap recordings) and reseed 14 days of demo data?\n\nThis cannot be undone.',
+      'Wipe ALL local data (including any real strap recordings)?\n\nThis cannot be undone.',
     );
     if (!ok) return;
     resetBtn.disabled = true;
     try {
-      await window.resetAndReseed();
+      await window.resetAllData();
     } finally {
       resetBtn.disabled = false;
     }
