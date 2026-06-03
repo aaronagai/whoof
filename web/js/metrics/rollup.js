@@ -15,7 +15,7 @@ import {
   recentDailyMetrics,
 } from '../data/queries.js';
 import { rmssd, sdnn, pnn50 } from './hrv.js';
-import { strainScore } from './strain.js';
+import { strainScore, zoneWeightedStrain } from './strain.js';
 import {
   detectSleepWindow, classifyStages, stageTotals,
   sleepNeedMinutes, sleepPerformance, sleepDebtMinutes7d, sleepConsistencyPct,
@@ -23,6 +23,7 @@ import {
 } from './sleep.js';
 import {
   maxHr, zoneSecondsFromHrSeries, caloriesFromHrSeries, stressSamples,
+  energyBankCalories, energyBankRemaining,
 } from './zones.js';
 import { detectWorkouts } from './workouts.js';
 import { recoveryBreakdown, RECOVERY_BASELINE_DAYS } from './recovery.js';
@@ -125,6 +126,7 @@ export async function rollupDay(db, dateIso, { ageOverride = null } = {}) {
   const rmssdHist = history.map((h) => h.rmssd_ms).filter((v) => v != null);
   const rhrHist = history.map((h) => h.resting_hr).filter((v) => v != null);
   const skinTempHist = history.map((h) => h.avg_skin_temp_c).filter((v) => v != null);
+  const respHist = history.map((h) => h.respiratory_rate).filter((v) => v != null);
 
   const yesterday = await getDailyMetric(db, previousDateIso(dateIso));
   const yesterdayStrain = yesterday?.strain_score ?? null;
@@ -188,6 +190,10 @@ export async function rollupDay(db, dateIso, { ageOverride = null } = {}) {
 
   // ---- Strain + workouts ---------------------------------------------------
   const todayStrain = strainScore(hrs, age, resting, medianDt);
+  // Zone-weighted strain (goose model) as an interpretable companion score.
+  const zoneStrain = zoneWeightedStrain({
+    zoneMinutes, avgHr: mean(hrs), restingHr: resting, maxHrBpm: maxBpm,
+  });
   const detected = detectWorkouts(rows, {
     age, maxHrOverride, sleepWindow, weightKg, sex,
   });
@@ -230,7 +236,17 @@ export async function rollupDay(db, dateIso, { ageOverride = null } = {}) {
     rhrHistory: rhrHist,
     sleepPerformancePct: performance,
     yesterdayStrain,
+    todayRespRate: respiratory,
+    respHistory: respHist,
   });
+
+  // ---- Energy Bank (MET-model resting/active calorie split) ----------------
+  // Needs body weight; energyBankCalories returns null without it (the Keytel
+  // `calories` field above still covers that case).
+  const energy = energyBankCalories({
+    hrSeries: hrs, weightKg, restingHr: resting, maxHrBpm: maxBpm, sampleIntervalSec: medianDt,
+  });
+  const energyRemaining = energyBankRemaining(breakdown.total, todayStrain);
 
   // ---- Bed / wake local times ----------------------------------------------
   // bedWakeTimesLocal returns [bed, wake] as Date objects. We persist as
@@ -285,6 +301,7 @@ export async function rollupDay(db, dateIso, { ageOverride = null } = {}) {
     avg_skin_temp_c: round(todaySkinTemp, 2),
     sample_count: rows.length,
     strain_score: todayStrain,
+    zone_weighted_strain_score: zoneStrain,
     recovery_score: breakdown.total,
     sleep_minutes: asleepMinutes,
     deep_sleep_minutes:  totals.deep  ?? 0,
@@ -298,10 +315,15 @@ export async function rollupDay(db, dateIso, { ageOverride = null } = {}) {
     respiratory_rate: respiratory,
     skin_temp_deviation_c: skinDeviation,
     calories: caloriesTotal,
+    energy_kcal_resting: energy ? energy.restingKcal : null,
+    energy_kcal_active:  energy ? energy.activeKcal : null,
+    energy_kcal_total:   energy ? energy.totalKcal : null,
+    energy_bank_remaining: energyRemaining,
     zone_minutes: zoneMinutes,
     recovery_hrv_component:    breakdown.hrv,
     recovery_rhr_component:    breakdown.rhr,
     recovery_sleep_component:  breakdown.sleep,
+    recovery_resp_component:   breakdown.resp,
     recovery_strain_component: breakdown.strain,
     stress_avg: stressAvg,
     // ---- WHOOP-parity metrics ----

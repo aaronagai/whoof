@@ -51,15 +51,44 @@ describe('recoveryScore (single-component, legacy)', () => {
 });
 
 describe('RECOVERY_WEIGHTS', () => {
-  it('exposes the four sub-component weights summing to 1.0', () => {
+  it('exposes the five sub-component weights (renormalised per present component)', () => {
     expect(Object.keys(RECOVERY_WEIGHTS).sort()).toEqual([
       'hrv',
+      'resp',
       'rhr',
       'sleep',
       'strain',
     ]);
-    const sum = Object.values(RECOVERY_WEIGHTS).reduce((a, b) => a + b, 0);
-    expect(sum).toBeCloseTo(1.0, 9);
+    // hrv/rhr/sleep/strain still sum to 1.0 — resp is additive, so days without
+    // respiratory data score exactly as the original 4-component model.
+    const legacySum = RECOVERY_WEIGHTS.hrv + RECOVERY_WEIGHTS.rhr +
+      RECOVERY_WEIGHTS.sleep + RECOVERY_WEIGHTS.strain;
+    expect(legacySum).toBeCloseTo(1.0, 9);
+  });
+
+  it('drops resp by default so legacy 4-component scores are unchanged', () => {
+    const args = {
+      todayRmssd: 55, rmssdHistory: [50, 51, 49, 50, 52, 48],
+      todayRhr: 52, rhrHistory: [55, 54, 56, 55, 53, 55],
+      sleepPerformancePct: 80, yesterdayStrain: 10,
+    };
+    const withoutResp = recoveryBreakdown(args);
+    const withNullResp = recoveryBreakdown({ ...args, todayRespRate: null, respHistory: [] });
+    expect(withoutResp.resp).toBeNull();
+    expect(withoutResp.total).toBe(withNullResp.total);
+  });
+
+  it('folds resp in when respiratory data is present', () => {
+    const base = {
+      todayRmssd: 55, rmssdHistory: [50, 51, 49, 50, 52, 48],
+      todayRhr: 52, rhrHistory: [55, 54, 56, 55, 53, 55],
+      sleepPerformancePct: 80, yesterdayStrain: 10,
+    };
+    const withResp = recoveryBreakdown({
+      ...base, todayRespRate: 13, respHistory: [15, 15, 16, 15, 14, 15],
+    });
+    expect(withResp.resp).not.toBeNull();        // low resp vs baseline → good
+    expect(withResp.resp).toBeGreaterThan(50);
   });
 
   it('exposes the rolling baseline length (14 days)', () => {

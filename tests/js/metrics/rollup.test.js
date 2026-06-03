@@ -76,6 +76,17 @@ describe('rollupDay', () => {
     expect(dm.avg_skin_temp_c).toBeCloseTo(33.2, 1);
     expect(dm.strain_score).toBeGreaterThanOrEqual(0);
     expect(dm.strain_score).toBeLessThanOrEqual(21);
+
+    // Ported goose metrics are live in the rollup.
+    expect(dm.zone_weighted_strain_score).toBeGreaterThanOrEqual(0);
+    expect(dm.zone_weighted_strain_score).toBeLessThanOrEqual(21);
+    // Weight (75 kg) is set, so the MET energy model runs.
+    expect(dm.energy_kcal_resting).toBeGreaterThan(0);
+    expect(dm.energy_kcal_active).toBeGreaterThanOrEqual(0);
+    expect(dm.energy_kcal_total).toBeCloseTo(dm.energy_kcal_resting + dm.energy_kcal_active, 1);
+    expect(dm.energy_bank_remaining).toBeGreaterThanOrEqual(0);
+    // resp component is present (null until 3 days of respiratory baseline exist).
+    expect(dm).toHaveProperty('recovery_resp_component');
   });
 
   it('populates WHOOP-parity metrics (vo2max, fitness age, whoop age, sleep architecture)', async () => {

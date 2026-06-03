@@ -25,11 +25,16 @@
 // Rolling window length (days) for the recovery-score baseline.
 export const RECOVERY_BASELINE_DAYS = 14;
 
-// Recovery sub-component weights. Must sum to 1.0.
+// Recovery sub-component weights — relative importance, not required to sum to
+// 1.0: recoveryBreakdown renormalises over whichever components are present, so
+// a day missing one (e.g. no respiratory rate) just drops it and reweights the
+// rest. `resp` was added from goose's recovery model; days without resp data
+// score exactly as before.
 export const RECOVERY_WEIGHTS = Object.freeze({
   hrv: 0.4,
   rhr: 0.2,
   sleep: 0.3,
+  resp: 0.1,
   strain: 0.1,
 });
 
@@ -125,7 +130,9 @@ export function recoveryScore(todayRmssd, historyRmssd) {
  * @param {ReadonlyArray<number|null|undefined>} args.rhrHistory
  * @param {number|null|undefined} args.sleepPerformancePct
  * @param {number|null|undefined} args.yesterdayStrain
- * @returns {{hrv: number|null, rhr: number|null, sleep: number|null, strain: number|null, total: number|null}}
+ * @param {number|null|undefined} args.todayRespRate
+ * @param {ReadonlyArray<number|null|undefined>} args.respHistory
+ * @returns {{hrv: number|null, rhr: number|null, sleep: number|null, resp: number|null, strain: number|null, total: number|null}}
  */
 export function recoveryBreakdown({
   todayRmssd,
@@ -134,9 +141,13 @@ export function recoveryBreakdown({
   rhrHistory,
   sleepPerformancePct,
   yesterdayStrain,
+  todayRespRate,
+  respHistory,
 }) {
   const hrv = zToScore(todayRmssd, rmssdHistory, false);
   const rhr = zToScore(todayRhr, rhrHistory, true);
+  // Respiratory rate: like RHR, lower-than-baseline is better recovery.
+  const resp = zToScore(todayRespRate, respHistory, true);
   const sleep = isNum(sleepPerformancePct) ? round1(sleepPerformancePct) : null;
   let strain = null;
   if (isNum(yesterdayStrain)) {
@@ -145,7 +156,7 @@ export function recoveryBreakdown({
     strain = round1(clamped);
   }
 
-  const components = { hrv, rhr, sleep, strain };
+  const components = { hrv, rhr, sleep, resp, strain };
   const used = Object.entries(components).filter(([, v]) => v !== null);
   if (used.length === 0) {
     return { ...components, total: null };
