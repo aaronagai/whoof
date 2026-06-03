@@ -715,6 +715,7 @@ async function loadRecovery() {
     { name: "HRV",       v: m.recovery_hrv_component   },
     { name: "Resting HR",v: m.recovery_rhr_component   },
     { name: "Sleep",     v: m.recovery_sleep_component },
+    { name: "Respiratory", v: m.recovery_resp_component },
     { name: "Prior strain", v: m.recovery_strain_component },
   ];
   // HRV baseline tag line (today vs. 14-day baseline)
@@ -766,6 +767,21 @@ async function loadRecovery() {
       <div class="val">${c.v == null ? "—" : Math.round(c.v)}</div>
     </div>
   `).join("");
+
+  // ---- Stress (daytime average) --------------------------------------------
+  if ($("rec-stress")) {
+    const st = m.stress_avg;
+    $("rec-stress").textContent = st == null ? "—" : Math.round(st);
+    const lbl = $("rec-stress-label");
+    if (lbl) {
+      if (st == null) { lbl.textContent = ""; }
+      else {
+        const tier = st < 34 ? ["CALM", COLORS.recGood] : st < 67 ? ["MODERATE", COLORS.recMid] : ["HIGH", COLORS.recBad];
+        lbl.textContent = tier[0];
+        lbl.style.color = tier[1];
+      }
+    }
+  }
 
   // ---- Fitness & longevity (VO2max, fitness age, WHOOP age) ----------------
   const setText = (id, v) => { const el = $(id); if (el) el.textContent = v; };
@@ -1022,6 +1038,24 @@ async function loadStrain() {
     $("strain-target").textContent = coach ? `Based on recovery: ${coach.split("·")[1]?.trim() ?? ""}` : "";
   }
   $("strain-cals").textContent = fmtInt(m.calories);
+
+  // Zone-weighted strain (interpretable companion score)
+  if ($("strain-zone")) {
+    $("strain-zone").textContent = m.zone_weighted_strain_score == null
+      ? "—" : m.zone_weighted_strain_score.toFixed(1);
+  }
+
+  // Energy bank — active/resting split + remaining strain budget gauge
+  if ($("energy-active")) {
+    $("energy-active").textContent = m.energy_kcal_active == null ? "—" : fmtInt(m.energy_kcal_active);
+    $("energy-resting").textContent = m.energy_kcal_resting == null ? "—" : fmtInt(m.energy_kcal_resting);
+    const remaining = m.energy_bank_remaining;
+    $("energy-remaining").textContent = remaining == null ? "—" : remaining.toFixed(1);
+    // Fill = remaining as a fraction of today's recovery-set budget (recovery/100·21).
+    const budget = m.recovery_score != null ? (m.recovery_score / 100) * 21 : 21;
+    const pct = (remaining == null || budget <= 0) ? 0 : Math.max(0, Math.min(100, (remaining / budget) * 100));
+    if ($("energy-bank-fill")) $("energy-bank-fill").style.width = `${pct}%`;
+  }
 
   // Zones row — modernised with vertical bars + labels
   const zoneMins = (m && m.zone_minutes) || [0, 0, 0, 0, 0];

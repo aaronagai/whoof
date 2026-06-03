@@ -440,6 +440,13 @@
         <div id="rec-health-monitor" style="margin-top:14px;"></div>
       </div>
       <div class="card span-2">
+        <span class="card-eyebrow" title="Average daytime stress — HRV suppression measured in rolling 5-minute windows. 0 = calm, 100 = highly stressed.">Stress · today</span>
+        <div style="display:flex; align-items:baseline; gap:12px; margin-top:10px;">
+          <div class="big-num" style="font-size:44px;"><span id="rec-stress">—</span><span class="unit" style="color:var(--text-muted);">/100</span></div>
+          <div id="rec-stress-label" style="font-size:12px; font-weight:600; letter-spacing:.04em;"></div>
+        </div>
+      </div>
+      <div class="card span-2">
         <div class="card-eyebrow">Recovery score · 30 days</div>
         <div class="chart-wrap"><canvas id="recovery-30d"></canvas></div>
       </div>
@@ -563,6 +570,21 @@
       <div class="card">
         <span class="card-eyebrow">Calories</span>
         <div class="big-num" style="font-size:44px; margin-top:12px; color: var(--warn);"><span id="strain-cals">—</span><span class="unit" style="color:var(--text-muted);">kcal</span></div>
+      </div>
+      <div class="card">
+        <span class="card-eyebrow" title="Time-in-zone weighted 1–5, blended 70/30 with HR reserve. An interpretable companion to day strain.">Zone strain</span>
+        <div class="big-num" style="font-size:44px; margin-top:12px;"><span id="strain-zone">—</span><span class="unit" style="color:var(--text-muted);">/21</span></div>
+      </div>
+      <div class="card span-2" id="energy-bank-card">
+        <span class="card-eyebrow" title="Calories split into a resting baseline and active burn (MET model). Budget left = today's recovery strain ceiling minus strain spent.">Energy bank</span>
+        <div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:14px; align-items:flex-end;">
+          <div><div class="big-num" style="font-size:32px; color:var(--warn);"><span id="energy-active">—</span></div><div style="font-size:10px; color:var(--text-muted);">Active kcal</div></div>
+          <div><div class="big-num" style="font-size:32px;"><span id="energy-resting">—</span></div><div style="font-size:10px; color:var(--text-muted);">Resting kcal</div></div>
+          <div><div class="big-num" style="font-size:32px;"><span id="energy-remaining">—</span></div><div style="font-size:10px; color:var(--text-muted);">Strain budget left</div></div>
+        </div>
+        <div style="margin-top:14px; height:8px; border-radius:4px; background:rgba(255,255,255,.08); overflow:hidden;">
+          <div id="energy-bank-fill" style="height:100%; width:0%; background:#03B5F3; border-radius:4px; transition:width .4s ease;"></div>
+        </div>
       </div>
       <div class="card span-4">
         <span class="card-eyebrow">Time in zones</span>
