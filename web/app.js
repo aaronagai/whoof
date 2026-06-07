@@ -1,6 +1,47 @@
 /* whoof v0.2 — dashboard front-end */
 
 const $ = (id) => document.getElementById(id);
+
+const DISPLAY_NAME_KEY = "whoof_display_name";
+
+function getDisplayName() {
+  try {
+    return (localStorage.getItem(DISPLAY_NAME_KEY) || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function setDisplayName(name) {
+  const trimmed = (name || "").trim();
+  try {
+    if (trimmed) localStorage.setItem(DISPLAY_NAME_KEY, trimmed);
+    else localStorage.removeItem(DISPLAY_NAME_KEY);
+  } catch { /* private browsing */ }
+  applyDisplayName();
+}
+
+function timeGreeting(date = new Date()) {
+  const hour = date.getHours();
+  if (hour < 5) return "Late night";
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  if (hour < 22) return "Good evening";
+  return "Good night";
+}
+
+function applyDisplayName(date = new Date()) {
+  const name = getDisplayName() || "Aaron";
+  const greeting = timeGreeting(date);
+  const welcomeEl = document.querySelector(".welcome-text");
+  if (welcomeEl) welcomeEl.textContent = greeting;
+
+  const welcomeNameEl = $("welcome-name");
+  if (welcomeNameEl) welcomeNameEl.textContent = name;
+
+  const nameEl = $("profile-name");
+  if (nameEl) nameEl.innerHTML = `${name || "You"} <span class="chevron">▾</span>`;
+}
 const fmt = (v, d = 1) =>
   v === null || v === undefined || (typeof v === "number" && !Number.isFinite(v))
     ? "—"
@@ -140,11 +181,16 @@ function setTab(name) {
   // Scroll to top on tab switch (especially helpful on mobile)
   window.scrollTo({ top: 0, behavior: "instant" });
   loadActiveTab().catch((e) => setStatus("error: " + e.message));
+  window.whoofAfterSetTab?.(name);
 }
 
 function initTabs() {
   document.querySelectorAll(".tab, .mtab").forEach((b) =>
-    b.addEventListener("click", () => setTab(b.dataset.tab)));
+    b.addEventListener("click", () => {
+      const tab = b.dataset.tab;
+      if (b.classList.contains("mtab") && window.whoofPhoneNavTap?.(tab)) return;
+      setTab(tab);
+    }));
   const coachForm = $("coach-form");
   if (coachForm) {
     coachForm.addEventListener("submit", (e) => {
@@ -515,11 +561,7 @@ async function loadOverview() {
   });
   if ($("overview-date")) $("overview-date").textContent = dateStr;
   if ($("topbar-date"))   $("topbar-date").textContent   = `Today · ${today_d.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
-  // Time-aware greeting
-  const hour = today_d.getHours();
-  const greeting = hour < 5 ? "Late night" : hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : hour < 22 ? "Good evening" : "Good night";
-  const welcomeEl = document.querySelector(".welcome-text");
-  if (welcomeEl) welcomeEl.textContent = `${greeting}, Aaron`;
+  applyDisplayName(today_d);
 
   const m = overview.metrics || {};
   const trend7 = overview.trend7 || [];
@@ -1445,8 +1487,10 @@ function initDrawer() {
   $("settings-form").addEventListener("submit", async (ev) => {
     ev.preventDefault();
     const f = new FormData(ev.target);
+    setDisplayName(f.get("display_name"));
     const payload = {};
     for (const [k, v] of f.entries()) {
+      if (k === "display_name") continue;
       payload[k] = v === "" ? null : v;
     }
     await fetchJSON("/api/profile", {
@@ -1472,8 +1516,14 @@ function initDrawer() {
 }
 
 async function loadProfile() {
-  const p = await fetchJSON("/api/profile");
   const form = $("settings-form");
+  if (form.display_name) form.display_name.value = getDisplayName();
+  let p = {};
+  try {
+    p = await fetchJSON("/api/profile");
+  } catch {
+    return;
+  }
   form.age.value = p.age ?? "";
   form.sex.value = p.sex ?? "";
   form.weight_kg.value = p.weight_kg ?? "";
@@ -1558,6 +1608,7 @@ function init() {
   initTabs();
   initDrawer();
   initTrendsControls();
+  applyDisplayName();
   // Persistent topbar date (independent of which tab the user is on)
   const td = new Date();
   if ($("topbar-date")) {
@@ -1579,6 +1630,7 @@ function init() {
 
 // Expose so the BLE/seed module can poke us after writing data.
 window.refreshAll = refreshAll;
+window.setTab = setTab;
 
 // --- ECG Monitor ---
 (function () {

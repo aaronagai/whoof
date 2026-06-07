@@ -28,12 +28,16 @@ import {
 import { generateInsights } from './metrics/insights.js';
 import { dailyPlan } from './metrics/plan.js';
 import { weeklySummary } from './metrics/weekly.js';
-import { recentDailyMetrics, samplesInRange, upsertJournalEntry, recentJournalEntries, journalForDate, deleteJournalEntry } from './data/queries.js';
+import { recentDailyMetrics, samplesInRange, recentJournalEntries } from './data/queries.js';
 import {
   notificationsEnabled, requestNotifications, disableNotifications,
   notifyBackfillComplete, notifyLowRecovery, notifyLowBattery, notifyHrAnomaly,
 } from './util/notify.js';
 import { analyseTagCorrelations, tagInsights } from './metrics/correlate.js';
+import { isPhone } from './util/phone.js';
+import { getPhoneSheet } from './util/phone-sheet.js';
+import { initPhoneNavSheets } from './util/phone-nav.js';
+import { initPhoneBleSheet } from './util/phone-ble.js';
 
 const $ = (id) => document.getElementById(id);
 const statusEl     = $('mvp-status');
@@ -78,16 +82,27 @@ function setStatus(state) {
   if (state === 'connected') announceConnected(); else announceDisconnected();
 }
 
+function setMvpIndicator(el, state, label, title) {
+  if (!el) return;
+  el.classList.remove('is-on', 'is-warn', 'is-bad', 'is-charge');
+  if (state) el.classList.add(state);
+  let dot = el.querySelector('.mvp-indicator-dot');
+  if (!dot) {
+    dot = document.createElement('span');
+    dot.className = 'mvp-indicator-dot';
+  }
+  el.replaceChildren(dot, document.createTextNode(` ${label}`));
+  if (title) el.title = title;
+}
+
 function updateStrapIndicators(isWorn, charging) {
   const wristEl = $('mvp-wrist');
   const chargeEl = $('mvp-charge');
   if (wristEl && isWorn !== null && isWorn !== undefined) {
-    wristEl.textContent = (isWorn ? '🟢' : '⚪') + ' Wrist';
-    wristEl.title = isWorn ? 'On wrist' : 'Off wrist';
+    setMvpIndicator(wristEl, isWorn ? 'is-on' : '', 'Wrist', isWorn ? 'On wrist' : 'Off wrist');
   }
   if (chargeEl && charging !== null && charging !== undefined) {
-    chargeEl.textContent = (charging ? '⚡' : '⚪') + ' Charge';
-    chargeEl.title = charging ? 'Charging' : 'Not charging';
+    setMvpIndicator(chargeEl, charging ? 'is-charge' : '', 'Charge', charging ? 'Charging' : 'Not charging');
   }
 }
 
@@ -250,8 +265,7 @@ async function setupAndConnect(deviceToUse = null) {
   });
 
   client.on('clock', () => {
-    const rtcEl = $('mvp-rtc');
-    if (rtcEl) { rtcEl.textContent = '🟢 Clock'; rtcEl.title = 'Strap RTC in sync'; }
+    setMvpIndicator($('mvp-rtc'), 'is-on', 'Clock', 'Strap RTC in sync');
   });
 
   client.on('log', (text) => appendLog(text));
@@ -268,8 +282,7 @@ async function setupAndConnect(deviceToUse = null) {
       updateStrapIndicators(null, evt.semantic === 'chargingOn');
     }
     if (evt.semantic === 'rtcLost') {
-      const rtcEl = $('mvp-rtc');
-      if (rtcEl) { rtcEl.textContent = '🔴 Clock'; rtcEl.title = 'Strap RTC lost — re-syncing'; }
+      setMvpIndicator($('mvp-rtc'), 'is-bad', 'Clock', 'Strap RTC lost — re-syncing');
     }
   });
 
@@ -436,7 +449,6 @@ async function purgeDemoOnce() {
     renderDailyPlan(),
     renderWeeklySummary(),
     renderRecoveryCal(),
-    renderTagCorrelations(),
     renderPoincareePlot(),
   ]);
 })();
@@ -826,7 +838,7 @@ setInterval(renderDailyPlan, 120_000);
   btn.id = 'mvp-notify-btn';
   btn.style.cssText = 'font-size:9px; margin-top:2px; width:100%;';
   const update = () => {
-    btn.textContent = notificationsEnabled() ? '🔔 Alerts on' : '🔕 Enable alerts';
+    btn.textContent = notificationsEnabled() ? 'Alerts on' : 'Enable alerts';
   };
   update();
   btn.addEventListener('click', async () => {
@@ -856,43 +868,80 @@ const INSIGHT_SVG = {
   critical: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>',
 };
 
+function insightsListHtml(insights) {
+  if (!insights.length) {
+    return `
+      <div class="empty-state" style="padding:20px 8px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 L9 17 L4 12"/></svg>
+        <div style="font-weight:600; color:var(--text-2);">All clear</div>
+        <div style="font-size:11px; color:var(--text-muted);">Insights surface when patterns emerge in your data.</div>
+      </div>`;
+  }
+  return insights.map((ins) => `
+    <div class="insight ${ins.severity}">
+      <span class="ins-icon">${INSIGHT_SVG[ins.severity] ?? INSIGHT_SVG.info}</span>
+      <div>
+        <div class="ins-title">${escapeHtml(ins.title)}</div>
+        <div class="ins-body">${escapeHtml(ins.body)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function loadInsights() {
+  if (!db) db = await openDb();
+  const metrics = await recentDailyMetrics(db, 14);
+  return generateInsights(metrics);
+}
+
 async function renderInsights() {
   const card = document.getElementById('insights-card');
   const list = document.getElementById('insights-list');
   if (!card || !list) return;
   try {
-    if (!db) db = await openDb();
-    const metrics = await recentDailyMetrics(db, 14);
-    const insights = generateInsights(metrics);
-    // Update topbar counter
+    const insights = await loadInsights();
     const counter = document.getElementById('topbar-insight-count');
     if (counter) {
       counter.textContent = insights.length;
       counter.style.display = insights.length ? 'inline-flex' : 'none';
     }
     card.style.display = '';
-    if (!insights.length) {
-      list.innerHTML = `
-        <div class="empty-state" style="padding:20px 8px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 L9 17 L4 12"/></svg>
-          <div style="font-weight:600; color:var(--text-2);">All clear</div>
-          <div style="font-size:11px; color:var(--text-muted);">Insights surface when patterns emerge in your data.</div>
-        </div>`;
-      return;
+    list.innerHTML = insightsListHtml(insights);
+
+    const sheet = getPhoneSheet();
+    if (sheet?.isOpen && sheet.contentMode !== 'nav') {
+      sheet.setBody(insightsListHtml(insights));
     }
-    list.innerHTML = insights.map((ins) => `
-      <div class="insight ${ins.severity}">
-        <span class="ins-icon">${INSIGHT_SVG[ins.severity] ?? INSIGHT_SVG.info}</span>
-        <div>
-          <div class="ins-title">${escapeHtml(ins.title)}</div>
-          <div class="ins-body">${escapeHtml(ins.body)}</div>
-        </div>
-      </div>
-    `).join('');
   } catch (err) {
     console.warn('[insights] render failed', err);
   }
 }
+
+function initInsightsPhoneSheet() {
+  const btn = document.getElementById('insights-notify-btn');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    if (isPhone()) {
+      const sheet = getPhoneSheet();
+      if (!sheet) return;
+      sheet.setTitle('Insights');
+      try {
+        const insights = await loadInsights();
+        sheet.setBody(insightsListHtml(insights));
+      } catch (err) {
+        sheet.setBody('<p style="color:var(--text-muted); font-size:13px;">Could not load insights.</p>');
+        console.warn('[insights] sheet load failed', err);
+      }
+      sheet.open();
+      return;
+    }
+    document.getElementById('insights-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+initInsightsPhoneSheet();
+initPhoneNavSheets();
+initPhoneBleSheet();
 
 // Refresh insights whenever data changes or on a slow ticker
 window.addEventListener('whoop-data-changed', () => renderInsights());
@@ -910,14 +959,21 @@ async function refreshHealth() {
     const sum = summarizeIntegrity(report);
     const dot = document.getElementById('mvp-health-dot');
     const msg = document.getElementById('mvp-health-msg');
-    if (dot) dot.textContent = sum.status === 'ok' ? '🟢' : sum.status === 'warn' ? '🟡' : '🔴';
+    if (dot) {
+      dot.className = 'mvp-health-status-dot'
+        + (sum.status === 'ok' ? ' is-on' : sum.status === 'warn' ? ' is-warn' : ' is-bad');
+      dot.textContent = '';
+    }
     if (msg) msg.textContent = sum.message;
   } catch (err) {
     // Log visibly — silent swallow masks init bugs.
     console.error('[health] refresh failed', err);
     const dot = document.getElementById('mvp-health-dot');
     const msg = document.getElementById('mvp-health-msg');
-    if (dot) dot.textContent = '🔴';
+    if (dot) {
+      dot.className = 'mvp-health-status-dot is-bad';
+      dot.textContent = '';
+    }
     if (msg) msg.textContent = 'check error';
   }
 }
@@ -1311,191 +1367,6 @@ window.addEventListener('hashchange', () => {
   if (location.hash === '#recovery') renderPoincareePlot();
 });
 
-// ----- Activity journal ----------------------------------------------------
-
-let _selectedTags = new Set();
-
-/** Return today as YYYY-MM-DD in local time. */
-function localToday() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-/** Load an existing journal entry for `date` into the form fields. */
-async function loadJournalEntry(date) {
-  const tagContainer = document.getElementById('journal-tags');
-  const textarea = document.getElementById('journal-text');
-  if (!tagContainer || !textarea) return;
-  _selectedTags.clear();
-  tagContainer.querySelectorAll('.journal-tag').forEach((b) => b.classList.remove('active'));
-  textarea.value = '';
-  try {
-    if (!db) db = await openDb();
-    const entry = await journalForDate(db, date);
-    if (entry) {
-      textarea.value = entry.text ?? '';
-      for (const tag of (entry.tags ?? [])) {
-        _selectedTags.add(tag);
-        const btn = tagContainer.querySelector(`[data-tag="${tag}"]`);
-        if (btn) btn.classList.add('active');
-      }
-    }
-  } catch {}
-}
-
-function wireJournal() {
-  const tagContainer = document.getElementById('journal-tags');
-  const textarea = document.getElementById('journal-text');
-  const saveBtn = document.getElementById('journal-save');
-  const statusEl = document.getElementById('journal-status');
-  const dateInput = document.getElementById('journal-date');
-
-  if (!tagContainer || !textarea || !saveBtn) return;
-
-  // Initialise date picker to today.
-  if (dateInput) {
-    dateInput.value = localToday();
-    dateInput.max   = localToday();
-    // When the user changes the date, pre-fill from any existing entry.
-    dateInput.addEventListener('change', async () => {
-      await loadJournalEntry(dateInput.value);
-    });
-  }
-
-  // Toggle tag selection styling.
-  tagContainer.addEventListener('click', (e) => {
-    const btn = e.target.closest('.journal-tag');
-    if (!btn) return;
-    const tag = btn.dataset.tag;
-    if (_selectedTags.has(tag)) {
-      _selectedTags.delete(tag);
-      btn.classList.remove('active');
-    } else {
-      _selectedTags.add(tag);
-      btn.classList.add('active');
-    }
-  });
-
-  saveBtn.addEventListener('click', async () => {
-    const text = textarea.value.trim();
-    const tags = [..._selectedTags];
-    if (!text && !tags.length) {
-      if (statusEl) statusEl.textContent = 'Add a tag or note first';
-      return;
-    }
-    saveBtn.disabled = true;
-    try {
-      if (!db) db = await openDb();
-      const date = dateInput ? dateInput.value : localToday();
-      await upsertJournalEntry(db, { date, text, tags });
-      if (statusEl) statusEl.textContent = 'Saved!';
-      textarea.value = '';
-      _selectedTags.clear();
-      tagContainer.querySelectorAll('.journal-tag').forEach((b) => b.classList.remove('active'));
-      // Reset date picker back to today after saving a past entry.
-      if (dateInput) dateInput.value = localToday();
-      await renderJournalHistory(); // also re-renders tag correlations
-    } catch (err) {
-      if (statusEl) statusEl.textContent = 'Save failed: ' + (err.message ?? err);
-    }
-    saveBtn.disabled = false;
-    setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
-  });
-
-  // Load today's existing entry on init.
-  (async () => {
-    await loadJournalEntry(localToday());
-    await renderJournalHistory();
-  })();
-}
-
-/** Tag emoji map used in both history rendering and elsewhere. */
-const TAG_ICONS = { alcohol: '🍺', illness: '🤒', stress: '😰', travel: '✈️', race: '🏆', goodsleep: '💤', hardworkout: '💪', caffeine: '☕', meditation: '🧘', cold: '🧊', nap: '😴' };
-
-async function renderJournalHistory() {
-  const histEl = document.getElementById('journal-history');
-  if (!histEl) return;
-  try {
-    if (!db) db = await openDb();
-    const entries = await recentJournalEntries(db, 14);
-    if (!entries.length) {
-      histEl.textContent = 'No journal entries yet.';
-    } else {
-      histEl.innerHTML = entries.map((e) => {
-        const d = new Date(e.date + 'T12:00:00');
-        const dateStr = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-        const tagsStr = (e.tags ?? []).map((t) => TAG_ICONS[t] ?? t).join(' ');
-        return `<div style="display:flex; align-items:baseline; padding:3px 0; border-top:1px solid var(--border);" data-journal-date="${e.date}">
-          <span style="color:var(--fg); font-size:11px; flex-shrink:0;">${dateStr}</span>
-          ${tagsStr ? `<span style="margin-left:4px; flex-shrink:0;">${tagsStr}</span>` : ''}
-          ${e.text ? `<span style="color:var(--muted); margin-left:4px; font-size:10px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(e.text.slice(0, 80))}${e.text.length > 80 ? '…' : ''}</span>` : '<span style="flex:1;"></span>'}
-          <button class="journal-delete-btn" data-date="${e.date}" title="Delete entry" style="margin-left:6px; background:none; border:none; color:var(--muted); cursor:pointer; font-size:13px; padding:0 2px; line-height:1; flex-shrink:0;">×</button>
-        </div>`;
-      }).join('');
-
-      // Wire delete buttons.
-      histEl.querySelectorAll('.journal-delete-btn').forEach((btn) => {
-        btn.addEventListener('click', async (ev) => {
-          ev.stopPropagation();
-          const date = btn.dataset.date;
-          try {
-            if (!db) db = await openDb();
-            await deleteJournalEntry(db, date);
-            await renderJournalHistory();
-          } catch (err) {
-            console.warn('[journal] delete failed', err);
-          }
-        });
-      });
-    }
-  } catch (err) {
-    console.warn('[journal] history failed', err);
-  }
-  // Refresh correlations each time history is (re)rendered.
-  await renderTagCorrelations();
-}
-
-// ----- Tag correlation insights --------------------------------------------
-
-async function renderTagCorrelations() {
-  const el = document.getElementById('tag-correlations');
-  if (!el) return;
-  try {
-    if (!db) db = await openDb();
-    // Fetch up to 365 days of entries + metrics (1 journal entry per day max).
-    const [entries, metrics] = await Promise.all([
-      recentJournalEntries(db, 365),
-      recentDailyMetrics(db, 365),
-    ]);
-    const corr = analyseTagCorrelations(entries, metrics);
-    const insights = tagInsights(corr);
-    if (!insights.length) {
-      // Show a prompt only if the user has started logging but there's not enough data yet.
-      if (entries.length > 0) {
-        el.innerHTML = `<div style="margin-top:8px; font-size:10px; color:var(--muted); font-style:italic;">Keep logging daily tags — insights appear once you have enough data points per tag (need ≥2 tagged and ≥2 untagged days with next-day metrics).</div>`;
-      } else {
-        el.innerHTML = '';
-      }
-      return;
-    }
-    const totalEntries = entries.length;
-    el.innerHTML = `
-      <div style="margin-top:10px; border-top:1px solid var(--border); padding-top:8px;">
-        <div style="font-size:10px; font-weight:600; color:var(--muted); letter-spacing:.05em; text-transform:uppercase; margin-bottom:2px;">Tag insights</div>
-        <div style="font-size:10px; color:var(--muted); margin-bottom:6px;">Next-day effects from ${totalEntries} logged ${totalEntries === 1 ? 'entry' : 'entries'}</div>
-        ${insights.map((ins) => {
-          const icon = ins.direction === 'negative' ? '⚠️' : '✅';
-          const color = ins.direction === 'negative' ? 'var(--rec-bad)' : 'var(--rec-good)';
-          return `<div style="padding:3px 0; font-size:11px; color:${color};">${icon} ${escapeHtml(ins.summary)}</div>`;
-        }).join('')}
-      </div>`;
-  } catch (err) {
-    console.warn('[correlations] render failed', err);
-  }
-}
-
-wireJournal();
-
 // ----- Weekly summary ------------------------------------------------------
 
 async function renderWeeklySummary() {
@@ -1555,7 +1426,6 @@ window.addEventListener('hashchange', () => {
   if (location.hash === '#trends') renderWeeklySummary();
 });
 window.addEventListener('whoop-data-changed', () => renderWeeklySummary());
-window.addEventListener('whoop-data-changed', () => renderTagCorrelations());
 
 // ----- Recovery calendar heatmap -------------------------------------------
 // 30-day heatmap calendar. Metric is user-selectable via #cal-metric.
