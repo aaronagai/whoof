@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>whoof</title>
 <link rel="manifest" href="/manifest.json" />
 <meta name="theme-color" content="#07070A" />
@@ -24,18 +24,13 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
 <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
 <link rel="mask-icon" href="/icons/icon.svg" color="#16EC06" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<!-- Load web fonts non-render-blocking so the PWA paints (and works offline)
-     immediately on the system-font fallback; fonts swap in when online. -->
-<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@200;300;400;500;600;700;800&display=swap">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@200;300;400;500;600;700;800&display=swap"></noscript>
 <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
 <aside class="sidebar">
   <div class="brand">
-    <img src="whooplogo.png" alt="logo" style="height:36px;object-fit:contain;">
+    <img src="/whooplogo.png" alt="whoof" class="brand-logo" width="120" height="36">
+    <span class="brand-wordmark">whoof</span>
   </div>
 
   <nav class="tabs">
@@ -102,16 +97,16 @@
     
     <div id="mvp-error" style="font-size:11px; color:var(--rec-bad); display:none; word-break:break-word;"></div>
     
-    <div style="display:flex; gap:8px; font-size:11px; color:var(--muted); margin: 2px 0;">
-      <span id="mvp-wrist" title="wrist worn">⚪ Wrist</span>
-      <span id="mvp-charge" title="charging state">⚪ Charge</span>
-      <span id="mvp-rtc" title="strap clock sync">⚪ Clock</span>
+    <div class="mvp-indicators">
+      <span id="mvp-wrist" class="mvp-indicator" title="wrist worn"><span class="mvp-indicator-dot"></span> Wrist</span>
+      <span id="mvp-charge" class="mvp-indicator" title="charging state"><span class="mvp-indicator-dot"></span> Charge</span>
+      <span id="mvp-rtc" class="mvp-indicator" title="strap clock sync"><span class="mvp-indicator-dot"></span> Clock</span>
     </div>
 
     <button id="mvp-connect">Connect Whoop</button>
     <button id="mvp-disconnect" style="display:none;">Disconnect</button>
     <button id="mvp-sync-now" style="display:none; font-size:10px; margin-top:2px;">Sync from strap now</button>
-    <button id="mvp-capture" style="display:none; font-size:10px; margin-top:2px;">📸 Capture raw packets</button>
+    <button id="mvp-capture" style="display:none; font-size:10px; margin-top:2px;">Capture raw packets</button>
 
     <details id="mvp-diag-details" style="display:none; font-size:11px; margin-top:4px;">
       <summary style="cursor:pointer; color:var(--muted);">Diagnostics</summary>
@@ -129,7 +124,7 @@
     </details>
 
 <details id="mvp-captures-details" style="font-size:11px; margin-top:4px;">
-      <summary style="cursor:pointer; color:var(--muted);">📚 Saved captures <span id="captures-count" style="font-variant-numeric:tabular-nums;">(0)</span></summary>
+      <summary style="cursor:pointer; color:var(--muted);">Saved captures <span id="captures-count" style="font-variant-numeric:tabular-nums;">(0)</span></summary>
       <div id="captures-list" style="font-size:10px; color:var(--muted); margin-top:4px; max-height:120px; overflow-y:auto;"></div>
     </details>
 
@@ -144,38 +139,39 @@
     </div>
 
     <div id="mvp-health" style="font-size:10px; color:var(--text-faint); margin-top:4px; cursor:pointer; opacity:0.7;" title="Click for full data integrity report">
-      <span id="mvp-health-dot">⚪</span> <span id="mvp-health-msg">—</span>
+      <span id="mvp-health-dot" class="mvp-health-status-dot" aria-hidden="true"></span><span id="mvp-health-msg">—</span>
     </div>
     
-    <div style="border-top:1px solid var(--border); margin:4px 0 2px 0;"></div>
-    
-    <div style="display:flex; gap:4px; flex-wrap:wrap;">
-      <button id="mvp-export" title="Export all data as JSON">JSON</button>
-      <button id="mvp-export-samples-csv" style="font-size:10px;" title="Export raw samples as CSV">Samples CSV</button>
-      <button id="mvp-export-daily-csv" style="font-size:10px;" title="Export daily metrics as CSV">Daily CSV</button>
-      <button id="mvp-export-journal-csv" style="font-size:10px;" title="Export journal entries as CSV">Journal CSV</button>
-      <button id="mvp-export-workouts-csv" style="font-size:10px;" title="Export detected workouts as CSV">Workouts CSV</button>
-      <button id="mvp-import">Import</button>
-      <button id="mvp-reset" title="Clear all local data" style="font-size:10px;">Reset</button>
-    </div>
-    <input id="mvp-import-file" type="file" accept="application/json" style="display:none;"/>
-    <div id="mvp-data-status" style="font-size:10px; color:var(--muted); min-height:1em; text-align:center;"></div>
+    <details class="mvp-section" id="mvp-data-details">
+      <summary>Export &amp; import</summary>
+      <div class="mvp-data-actions">
+        <button id="mvp-export" title="Export all data as JSON">JSON</button>
+        <button id="mvp-export-samples-csv" title="Export raw samples as CSV">Samples</button>
+        <button id="mvp-export-daily-csv" title="Export daily metrics as CSV">Daily</button>
+        <button id="mvp-export-journal-csv" title="Export journal entries as CSV">Journal</button>
+        <button id="mvp-export-workouts-csv" title="Export detected workouts as CSV">Workouts</button>
+        <button id="mvp-import">Import</button>
+        <button id="mvp-reset" title="Clear all local data">Reset</button>
+      </div>
+      <input id="mvp-import-file" type="file" accept="application/json" hidden>
+      <div id="mvp-data-status" class="mvp-data-status"></div>
+    </details>
 
-    <div style="border-top:1px solid var(--border); margin:6px 0 2px 0; padding-top:6px;">
-      <div style="font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px;">Apple Health</div>
-      <div style="font-size:11px; display:flex; justify-content:space-between;">
-        <span>Weight:</span>
-        <span id="mvp-weight" style="font-weight:600; font-variant-numeric:tabular-nums;">—</span>
+    <details class="mvp-section" id="mvp-health-details">
+      <summary>Apple Health</summary>
+      <div class="mvp-health-row">
+        <span>Weight</span>
+        <span id="mvp-weight" class="mvp-health-weight">—</span>
       </div>
-      <div style="display:flex; gap:6px; margin-top:4px; flex-wrap:wrap;">
-        <button id="mvp-pull-weight" style="font-size:10px;">📱 iPhone</button>
-        <button id="mvp-scale" style="font-size:10px;">⚖️ Scale</button>
-        <button id="mvp-manual-weight" style="font-size:10px;">✎</button>
-        <button id="mvp-health-import-btn" style="font-size:10px;">📄 Import</button>
-        <button id="mvp-health-setup" style="font-size:10px;">Setup…</button>
+      <div class="mvp-health-actions">
+        <button id="mvp-pull-weight">iPhone</button>
+        <button id="mvp-scale">Scale</button>
+        <button id="mvp-manual-weight">Edit</button>
+        <button id="mvp-health-import-btn">Import XML</button>
+        <button id="mvp-health-setup">Setup…</button>
       </div>
-      <input id="mvp-health-import" type="file" accept=".xml,text/xml,application/xml" style="display:none;"/>
-    </div>
+      <input id="mvp-health-import" type="file" accept=".xml,text/xml,application/xml" hidden>
+    </details>
   </div>
 
   <!-- Apple Health setup modal -->
@@ -218,7 +214,10 @@
     </div>
   </div>
 
-  <button class="settings-btn" id="open-settings" style="margin-top:0;">⚙ Settings</button>
+  <button class="settings-btn" id="open-settings" style="margin-top:0;">
+    <span class="settings-btn-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></span>
+    Settings
+  </button>
   <div class="status-line" id="status-line">…</div>
 </aside>
 
@@ -229,14 +228,16 @@
       <div class="date-pill"><span class="dot"></span><span id="topbar-date">Today</span></div>
     </div>
     <div class="top-bar-right">
-      <button class="icon-btn" title="Notifications">
+      <button class="icon-btn" id="insights-notify-btn" type="button" title="Insights" aria-label="Insights">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
         <span class="badge-count" id="topbar-insight-count">0</span>
       </button>
-      <div class="user-profile">
-        <div class="avatar">AN</div>
+      <div class="user-profile" id="profile-btn" role="button" tabindex="0" aria-label="Bluetooth and settings">
+        <div class="avatar">
+          <img id="profile-avatar" src="/usericon.png" alt="Profile" width="32" height="32">
+        </div>
         <div class="user-info">
-          <div class="user-name">Aaron <span class="chevron">▾</span></div>
+          <div class="user-name" id="profile-name">You <span class="chevron">▾</span></div>
           <div class="user-email">whoof</div>
         </div>
       </div>
@@ -247,11 +248,39 @@
   <section class="tab-panel" data-panel="overview">
     <header class="panel-header">
       <div>
-        <h1 class="welcome-text">Good morning, Aaron</h1>
-        <div class="panel-subtitle">Your body's signals, all in one place.</div>
+        <div class="welcome-heading">
+          <h1 class="welcome-text">Good morning</h1>
+          <div class="welcome-name" id="welcome-name">Aaron</div>
+        </div>
       </div>
       <span class="panel-date" id="overview-date"></span>
     </header>
+
+    <!-- "My Day" section — live biometrics first -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin: 0 0 16px 0;">
+      <h2>My day</h2>
+      <span class="eyebrow">live · biometrics</span>
+    </div>
+
+    <div class="grid">
+      <div class="card span-4">
+        <span class="card-eyebrow">Live heart rate</span>
+        <div class="now-tile" style="grid-template-columns: auto 1fr; gap: 24px;">
+          <div class="now-hr" style="font-size:64px;">
+            <span id="now-hr">—</span><span class="unit">bpm</span>
+            <span class="heart-pulse">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg>
+            </span>
+          </div>
+          <div class="now-grid">
+            <div><span class="lbl">SpO₂</span><span id="now-spo2">—</span></div>
+            <div><span class="lbl">Skin temp</span><span id="now-temp">—</span></div>
+            <div><span class="lbl">Battery</span><span id="now-battery">—</span></div>
+            <div><span class="lbl">Updated</span><span id="now-ago">—</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Hero ring trio (Whoop signature) -->
     <div class="hero-ring-row">
@@ -292,31 +321,7 @@
       </div>
     </div>
 
-    <!-- "My Day" section -->
-    <div style="display:flex; align-items:center; justify-content:space-between; margin: 32px 0 16px 0;">
-      <h2>My day</h2>
-      <span class="eyebrow">live · biometrics</span>
-    </div>
-
     <div class="grid">
-      <div class="card span-2">
-        <span class="card-eyebrow">Live heart rate</span>
-        <div class="now-tile" style="grid-template-columns: auto 1fr; gap: 24px;">
-          <div class="now-hr" style="font-size:64px;">
-            <span id="now-hr">—</span><span class="unit">bpm</span>
-            <span class="heart-pulse">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg>
-            </span>
-          </div>
-          <div class="now-grid">
-            <div><span class="lbl">SpO₂</span><span id="now-spo2">—</span></div>
-            <div><span class="lbl">Skin temp</span><span id="now-temp">—</span></div>
-            <div><span class="lbl">Battery</span><span id="now-battery">—</span></div>
-            <div><span class="lbl">Updated</span><span id="now-ago">—</span></div>
-          </div>
-        </div>
-      </div>
-
       <div class="card span-2" id="wake-alarm-card">
         <span class="card-eyebrow">⏰ Wake alarm</span>
         <div style="display:flex; align-items:baseline; gap:10px; margin-top:6px;">
@@ -363,35 +368,6 @@
       <div class="card span-4">
         <span class="card-eyebrow">Heart rate · today</span>
         <div class="chart-wrap tall"><canvas id="hr-today"></canvas></div>
-      </div>
-
-      <div class="card span-4" id="journal-card">
-        <div class="card-eyebrow">Activity journal</div>
-        <div style="display:flex; gap:6px; align-items:flex-start; margin-top:6px; flex-wrap:wrap;">
-          <div style="flex:1; min-width:200px;">
-            <div style="display:flex; gap:4px; flex-wrap:wrap; margin-bottom:6px;" id="journal-tags">
-              <button class="journal-tag" data-tag="alcohol" title="Alcohol consumed">🍺 Alcohol</button>
-              <button class="journal-tag" data-tag="illness" title="Sick or unwell">🤒 Illness</button>
-              <button class="journal-tag" data-tag="stress" title="High mental or emotional stress">😰 Stress</button>
-              <button class="journal-tag" data-tag="travel" title="Travel or time zone change">✈️ Travel</button>
-              <button class="journal-tag" data-tag="race" title="Race or competition">🏆 Race</button>
-              <button class="journal-tag" data-tag="goodsleep" title="Unusually good sleep night">💤 Good sleep</button>
-              <button class="journal-tag" data-tag="hardworkout" title="Hard training session">💪 Hard workout</button>
-              <button class="journal-tag" data-tag="caffeine" title="Late caffeine (after 2 pm)">☕ Late caffeine</button>
-              <button class="journal-tag" data-tag="meditation" title="Meditation or breathwork session">🧘 Meditation</button>
-              <button class="journal-tag" data-tag="cold" title="Cold exposure — ice bath, cold shower">🧊 Cold</button>
-              <button class="journal-tag" data-tag="nap" title="Took a nap during the day">😴 Nap</button>
-            </div>
-            <textarea id="journal-text" placeholder="Add a note for today…" style="width:100%; box-sizing:border-box; min-height:60px; background:var(--card); color:var(--fg); border:1px solid var(--border); border-radius:6px; padding:6px; font-family:inherit; font-size:11px; resize:vertical;"></textarea>
-          </div>
-          <div style="display:flex; flex-direction:column; gap:4px;">
-            <input id="journal-date" type="date" title="Date for this entry (defaults to today)" style="background:var(--card); color:var(--fg); border:1px solid var(--border); border-radius:6px; padding:4px 6px; font-family:inherit; font-size:11px; cursor:pointer;">
-            <button id="journal-save" style="white-space:nowrap;">Save note</button>
-            <span id="journal-status" style="font-size:10px; color:var(--muted);"></span>
-          </div>
-        </div>
-        <div id="journal-history" style="margin-top:8px; font-size:11px; color:var(--muted);"></div>
-        <div id="tag-correlations"></div>
       </div>
     </div>
   </section>
@@ -780,6 +756,7 @@
     <button id="close-settings" class="close-btn">×</button>
   </div>
   <form class="settings-form" id="settings-form">
+    <label>Display name <input name="display_name" id="settings-display-name" type="text" maxlength="32" placeholder="Optional" autocomplete="nickname" /></label>
     <label>Age <input name="age" type="number" min="1" max="120" /></label>
     <label>Sex
       <select name="sex">
@@ -802,12 +779,19 @@
 </aside>
 <div class="backdrop" id="drawer-backdrop"></div>
 
+<!-- Phone pull-up sheet — visible/interactive only ≤720px (see styles.css + js/util/phone-sheet.js) -->
+<div class="phone-sheet-backdrop" id="phone-sheet-backdrop" hidden aria-hidden="true"></div>
+<aside class="phone-sheet" id="phone-sheet" role="dialog" aria-modal="true" aria-labelledby="phone-sheet-title" hidden>
+  <div class="phone-sheet-drag" aria-hidden="true"><span class="phone-sheet-grab"></span></div>
+  <header class="phone-sheet-head">
+    <h2 class="phone-sheet-title" id="phone-sheet-title"></h2>
+    <button type="button" class="close-btn phone-sheet-close" aria-label="Close">×</button>
+  </header>
+  <div class="phone-sheet-body" id="phone-sheet-body"></div>
+</aside>
+
 <!-- Mobile bottom navigation — visible only on iPhone-width screens via CSS -->
 <nav class="mobile-nav" id="mobile-nav" aria-label="Primary">
-  <button class="mtab" data-tab="overview" aria-label="Overview">
-    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
-    Today
-  </button>
   <button class="mtab" data-tab="recovery" aria-label="Recovery">
     <svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg>
     Recovery
@@ -827,10 +811,6 @@
   <button class="mtab" data-tab="live" aria-label="Live">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"/></svg>
     Live
-  </button>
-  <button class="mtab" data-tab="coach" aria-label="Coach">
-    <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-    Coach
   </button>
 </nav>
 
