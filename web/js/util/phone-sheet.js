@@ -73,6 +73,7 @@ export class PhoneSheet {
     document.body.classList.add("phone-sheet-open");
     this.root.setAttribute("aria-hidden", "false");
     if (this.bodyEl) this.bodyEl.scrollTop = 0;
+    window.whoofTopbarScrollRefresh?.();
     return true;
   }
 
@@ -86,6 +87,7 @@ export class PhoneSheet {
     this.root.classList.remove("open");
     this.backdrop?.classList.remove("open");
     document.body.classList.remove("phone-sheet-open");
+    window.whoofTopbarScrollRefresh?.();
     const root = this.root;
     const backdrop = this.backdrop;
     window.setTimeout(() => {

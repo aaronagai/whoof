@@ -37,6 +37,7 @@ import { analyseTagCorrelations, tagInsights } from './metrics/correlate.js';
 import { isPhone } from './util/phone.js';
 import { initPhoneNavSheets } from './util/phone-nav.js';
 import { initPhoneBleSheet } from './util/phone-ble.js';
+import { initTopbarScroll } from './util/topbar-scroll.js';
 
 const $ = (id) => document.getElementById(id);
 const statusEl     = $('mvp-status');
@@ -916,6 +917,7 @@ async function renderInsights() {
 
 initPhoneNavSheets();
 initPhoneBleSheet();
+initTopbarScroll();
 
 // Refresh insights whenever data changes or on a slow ticker
 window.addEventListener('whoop-data-changed', () => renderInsights());

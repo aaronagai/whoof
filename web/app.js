@@ -172,6 +172,7 @@ function setTab(name) {
   // Sidebar tabs + mobile bottom-nav tabs share .active styling
   document.querySelectorAll(".tab, .mtab").forEach((t) =>
     t.classList.toggle("active", t.dataset.tab === name));
+  $("topbar-live-btn")?.classList.toggle("active", name === "live");
   document.querySelectorAll(".tab-panel").forEach((p) =>
     p.classList.toggle("active", p.dataset.panel === name));
   history.replaceState(null, "", "#" + name);
@@ -1646,6 +1647,7 @@ function init() {
 window.refreshAll = refreshAll;
 window.setTab = setTab;
 window.setTopbarBattery = setTopbarBattery;
+window.whoofLoadLive = () => loadLive().catch((e) => setStatus("error: " + e.message));
 
 // --- ECG Monitor (RR-driven) ---
 (function () {

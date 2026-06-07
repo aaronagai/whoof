@@ -1,8 +1,14 @@
 import { isPhone, phoneMediaQuery } from "./phone.js";
 import { getPhoneSheet } from "./phone-sheet.js";
+import {
+  initPhoneLiveCarousel,
+  isPhoneLivePageOpen,
+  showPhoneHomePage,
+  showPhoneLivePage,
+} from "./phone-live-carousel.js";
 
-/** Tabs exposed in the bottom mobile nav (Today/overview is the default homepage; coach is sidebar-only). */
-export const MOBILE_NAV_TABS = ["sleep", "recovery", "strain", "trends", "live"];
+/** Tabs in the bottom mobile nav (Today/overview is homepage; live is top-bar carousel page). */
+export const MOBILE_NAV_TABS = ["sleep", "recovery", "strain", "trends"];
 
 /** Phone homepage tab — shown in main content, not the bottom nav or pull-up sheet. */
 export const PHONE_HOME_TAB = "overview";
@@ -50,14 +56,25 @@ export function restorePhoneNavPanel() {
 function restoreOverviewToMain() {
   const panel = getPanel(PHONE_HOME_TAB);
   const main = document.querySelector("main.content");
-  if (!panel || !main || panel.parentElement === main) return;
+  if (!panel || !main) return;
+
+  const carouselHome = document.querySelector(
+    `.phone-page-slide[data-phone-page="${PHONE_HOME_TAB}"]`
+  );
+  if (carouselHome && !carouselHome.contains(panel)) {
+    carouselHome.appendChild(panel);
+    return;
+  }
+
+  if (panel.parentElement === main) return;
   const topBar = main.querySelector(".top-bar");
   if (topBar?.nextElementSibling) main.insertBefore(panel, topBar.nextElementSibling);
   else main.prepend(panel);
 }
 
-/** Phone homepage: close nav sheet and show Today in the main scroll area. */
+/** Phone homepage: close overlays and show Today in the main scroll area. */
 function showPhoneHomeTab() {
+  showPhoneHomePage();
   const sheet = getPhoneSheet();
   restorePhoneNavPanel();
   restoreOverviewToMain();
@@ -69,6 +86,8 @@ function resetSheetScroll(sheet) {
 }
 
 function mountPanel(tab) {
+  showPhoneHomePage();
+
   const sheet = getPhoneSheet();
   const panel = getPanel(tab);
   if (!sheet?.bodyEl || !panel) return false;
@@ -112,15 +131,16 @@ function openNavSheet(tab) {
  * Requires window.setTab from app.js.
  */
 export function initPhoneNavSheets() {
+  initPhoneLiveCarousel();
+
   const sheet = getPhoneSheet();
   if (!sheet) return;
 
   sheet.setOnClose(() => {
     if (sheet.contentMode !== "nav") return;
+    const wasTab = mountedTab;
     restorePhoneNavPanel();
-    // Dismissed detail sheet → return to Today home in main scroll area.
-    const activeMtab = document.querySelector(".mtab.active");
-    if (activeMtab?.dataset.tab && activeMtab.dataset.tab !== PHONE_HOME_TAB) {
+    if (wasTab && wasTab !== PHONE_HOME_TAB) {
       window.setTab?.(PHONE_HOME_TAB);
     }
   });
@@ -148,13 +168,28 @@ export function initPhoneNavSheets() {
       showPhoneHomeTab();
       return;
     }
+    if (tab === "live") {
+      showPhoneLivePage();
+      return;
+    }
     if (!MOBILE_NAV_TABS.includes(tab)) return;
-    // Sidebar hash links / deep links: sheet for mobile nav tabs only.
     if (!document.querySelector(`.mtab[data-tab="${tab}"]`)?.classList.contains("active")) return;
     openNavSheet(tab);
   };
 
   window.whoofRestoreNavPanel = restorePhoneNavPanel;
+
+  document.getElementById("topbar-live-btn")?.addEventListener("click", () => {
+    if (!isPhone()) {
+      window.setTab?.("live");
+      return;
+    }
+    if (isPhoneLivePageOpen()) {
+      showPhoneHomePage();
+      return;
+    }
+    showPhoneLivePage();
+  });
 
   /** Hero ring cards on Today → open the matching nav pull-up sheet on phone. */
   document.querySelectorAll(
@@ -179,6 +214,7 @@ export function initPhoneNavSheets() {
       restoreOverviewToMain();
       window.whoofRestoreBlePanel?.();
       sheet.close();
+      showPhoneHomePage();
     }
   });
 }

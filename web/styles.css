@@ -486,17 +486,32 @@ main.content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* Full-bleed frosted bar: span main.content horizontal padding */
+  /* Full-bleed bar: span main.content horizontal padding */
   margin-left: calc(-1 * var(--content-pad-x));
   margin-right: calc(-1 * var(--content-pad-x));
   padding-left: var(--content-pad-x);
   padding-right: var(--content-pad-x);
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  transition:
+    background 220ms ease,
+    border-bottom-color 220ms ease,
+    -webkit-backdrop-filter 220ms ease,
+    backdrop-filter 220ms ease;
+}
+.top-bar.is-scrolled {
   background: var(--topbar-glass-bg);
   -webkit-backdrop-filter: saturate(180%) blur(var(--topbar-blur));
   backdrop-filter: saturate(180%) blur(var(--topbar-blur));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
 }
 .top-bar-left, .top-bar-right { display: flex; align-items: center; gap: 14px; }
+
+.top-bar-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
 .date-pill {
   display: inline-flex;
@@ -516,6 +531,37 @@ main.content {
   border-radius: 50%;
   background: var(--recovery);
   box-shadow: 0 0 8px var(--recovery-glow);
+}
+
+.topbar-live-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 120ms, transform 100ms, background 120ms;
+}
+.topbar-live-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.topbar-live-btn:active { transform: scale(0.94); }
+.topbar-live-btn.active {
+  color: var(--text);
+  border-color: var(--border-hi);
 }
 
 .location-badge {
@@ -689,6 +735,10 @@ main.content {
   main.content {
     --content-pad-x: 14px;
     padding: 12px var(--content-pad-x) calc(var(--phone-nav-h) + 16px + var(--sa-bottom)) var(--content-pad-x); /* leave room for bottom nav */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   /* Make topbar compact + respect status-bar inset */
@@ -706,6 +756,8 @@ main.content {
   .user-profile .user-info { display: none; }
   .user-profile { padding: 4px; }
   .date-pill { padding: 6px 10px; font-size: 11px; }
+  .topbar-live-btn { width: 32px; height: 32px; }
+  .topbar-live-btn svg { width: 16px; height: 16px; }
 
   /* Panel header: smaller hero, no right-aligned date hugging */
   .panel-header { padding: 8px 0 16px 0; flex-direction: column; align-items: flex-start; gap: 10px; }
@@ -785,9 +837,50 @@ main.content {
     display: none !important;
   }
 
-  /* Today/Overview is the phone homepage — visible in main when active */
-  main.content > .tab-panel[data-panel="overview"].active {
+  /* Today + Live carousel pages (side-by-side horizontal track) */
+  .phone-page-carousel {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    margin-left: calc(-1 * var(--content-pad-x) - var(--sa-left));
+    margin-right: calc(-1 * var(--content-pad-x) - var(--sa-right));
+    width: calc(100% + 2 * var(--content-pad-x) + var(--sa-left) + var(--sa-right));
+  }
+  .phone-page-track {
+    display: flex;
+    width: 200%;
+    height: 100%;
+    transform: translateX(-50%);
+    transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
+    will-change: transform;
+  }
+  .phone-page-carousel.is-live .phone-page-track {
+    transform: translateX(0);
+  }
+  .phone-page-slide {
+    flex: 0 0 50%;
+    width: 50%;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 calc(var(--content-pad-x) + var(--sa-left)) 0 calc(var(--content-pad-x) + var(--sa-right));
+  }
+  .phone-page-slide > .tab-panel {
     display: block !important;
+  }
+  .phone-page-slide > .tab-panel .grid {
+    gap: 10px;
+    justify-items: center;
+  }
+  .phone-page-slide > .tab-panel .grid > .card {
+    width: 100%;
+    max-width: 420px;
+  }
+
+  body.phone-live-page {
+    overflow: hidden;
+    overscroll-behavior: none;
   }
 
   /* Keep top bar tappable above sheet backdrop */

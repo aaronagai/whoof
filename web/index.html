@@ -225,7 +225,12 @@
   <!-- Top bar -->
   <header class="top-bar">
     <div class="top-bar-left">
-      <div class="date-pill"><span class="dot"></span><span id="topbar-date">—</span></div>
+      <div class="top-bar-status">
+        <div class="date-pill"><span class="dot"></span><span id="topbar-date">—</span></div>
+        <button type="button" class="topbar-live-btn" id="topbar-live-btn" aria-label="Open live metrics">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"/></svg>
+        </button>
+      </div>
     </div>
     <div class="top-bar-right">
       <div class="user-profile" id="profile-btn" role="button" tabindex="0" aria-label="Bluetooth and settings">
@@ -802,10 +807,6 @@
   <button class="mtab" data-tab="trends" aria-label="Trends">
     <svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
     Trends
-  </button>
-  <button class="mtab" data-tab="live" aria-label="Live">
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"/></svg>
-    Live
   </button>
 </nav>
 
