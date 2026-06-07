@@ -34,10 +34,7 @@ function applyDisplayName(date = new Date()) {
   const name = getDisplayName() || "Aaron";
   const greeting = timeGreeting(date);
   const welcomeEl = document.querySelector(".welcome-text");
-  if (welcomeEl) welcomeEl.textContent = greeting;
-
-  const welcomeNameEl = $("welcome-name");
-  if (welcomeNameEl) welcomeNameEl.textContent = name;
+  if (welcomeEl) welcomeEl.textContent = `${greeting}, ${name}`;
 
   const nameEl = $("profile-name");
   if (nameEl) nameEl.innerHTML = `${name || "You"} <span class="chevron">▾</span>`;
@@ -294,6 +291,26 @@ async function sendCoachMessage(text) {
 
 function setStatus(text) { $("status-line").textContent = text; }
 
+function setTopbarBattery(batteryOrDetail) {
+  const el = $("topbar-date");
+  const dot = document.querySelector(".date-pill .dot");
+  if (!el) return;
+  let text = "—";
+  if (typeof batteryOrDetail === "number" && Number.isFinite(batteryOrDetail)) {
+    text = `${Math.round(batteryOrDetail)}%`;
+  } else if (typeof batteryOrDetail === "string" && batteryOrDetail) {
+    text = batteryOrDetail.includes("%") ? batteryOrDetail : `${batteryOrDetail}%`;
+  } else if (batteryOrDetail?.detail) {
+    text = batteryOrDetail.detail;
+  }
+  el.textContent = text;
+  if (dot) {
+    const known = text !== "—";
+    dot.style.background = known ? "var(--recovery)" : "var(--text-faint)";
+    dot.style.boxShadow = known ? "0 0 8px var(--recovery-glow)" : "none";
+  }
+}
+
 async function refreshStatus() {
   try {
     const s = await fetchJSON("/api/status");
@@ -305,6 +322,7 @@ async function refreshStatus() {
       line += "\nno samples yet";
     }
     if (s.latest_battery) line += `\nbattery ${s.latest_battery.detail}`;
+    setTopbarBattery(s.latest_battery);
     setStatus(line);
   } catch (e) {
     setStatus("error: " + e.message);
@@ -560,7 +578,7 @@ async function loadOverview() {
     weekday: "long", month: "short", day: "numeric",
   });
   if ($("overview-date")) $("overview-date").textContent = dateStr;
-  if ($("topbar-date"))   $("topbar-date").textContent   = `Today · ${today_d.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+  setTopbarBattery(overview.battery);
   applyDisplayName(today_d);
 
   const m = overview.metrics || {};
@@ -1609,11 +1627,7 @@ function init() {
   initDrawer();
   initTrendsControls();
   applyDisplayName();
-  // Persistent topbar date (independent of which tab the user is on)
-  const td = new Date();
-  if ($("topbar-date")) {
-    $("topbar-date").textContent = `Today · ${td.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
-  }
+  setTopbarBattery(null);
   refreshAll();
   setInterval(refreshAll, 10000);
   // Allow other modules (app-mvp.js, etc.) to trigger a re-render when they
@@ -1631,6 +1645,7 @@ function init() {
 // Expose so the BLE/seed module can poke us after writing data.
 window.refreshAll = refreshAll;
 window.setTab = setTab;
+window.setTopbarBattery = setTopbarBattery;
 
 // --- ECG Monitor (RR-driven) ---
 (function () {

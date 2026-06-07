@@ -2,7 +2,7 @@ import { isPhone, phoneMediaQuery } from "./phone.js";
 import { getPhoneSheet } from "./phone-sheet.js";
 
 /** Tabs exposed in the bottom mobile nav (Today/overview is the default homepage; coach is sidebar-only). */
-export const MOBILE_NAV_TABS = ["recovery", "sleep", "strain", "trends", "live"];
+export const MOBILE_NAV_TABS = ["sleep", "recovery", "strain", "trends", "live"];
 
 /** Phone homepage tab — shown in main content, not the bottom nav or pull-up sheet. */
 export const PHONE_HOME_TAB = "overview";
@@ -155,6 +155,23 @@ export function initPhoneNavSheets() {
   };
 
   window.whoofRestoreNavPanel = restorePhoneNavPanel;
+
+  /** Hero ring cards on Today → open the matching nav pull-up sheet on phone. */
+  document.querySelectorAll(
+    `.tab-panel[data-panel="${PHONE_HOME_TAB}"] .ring-card-link[data-nav-tab]`
+  ).forEach((card) => {
+    const tab = card.dataset.navTab;
+    if (!tab || !MOBILE_NAV_TABS.includes(tab)) return;
+
+    card.addEventListener("click", () => {
+      window.setTab?.(tab);
+    });
+    card.addEventListener("keydown", (ev) => {
+      if (ev.key !== "Enter" && ev.key !== " ") return;
+      ev.preventDefault();
+      card.click();
+    });
+  });
 
   phoneMediaQuery().addEventListener("change", (ev) => {
     if (!ev.matches) {

@@ -35,7 +35,6 @@ import {
 } from './util/notify.js';
 import { analyseTagCorrelations, tagInsights } from './metrics/correlate.js';
 import { isPhone } from './util/phone.js';
-import { getPhoneSheet } from './util/phone-sheet.js';
 import { initPhoneNavSheets } from './util/phone-nav.js';
 import { initPhoneBleSheet } from './util/phone-ble.js';
 
@@ -263,6 +262,7 @@ async function setupAndConnect(deviceToUse = null) {
     if (liveBat) liveBat.textContent = batStr;
     const nowBat = document.getElementById('now-battery');
     if (nowBat) nowBat.textContent = batStr;
+    window.setTopbarBattery?.(pct);
     if (pct < 20) notifyLowBattery(pct);
   });
 
@@ -907,46 +907,13 @@ async function renderInsights() {
   if (!card || !list) return;
   try {
     const insights = await loadInsights();
-    const counter = document.getElementById('topbar-insight-count');
-    if (counter) {
-      counter.textContent = insights.length;
-      counter.style.display = insights.length ? 'inline-flex' : 'none';
-    }
     card.style.display = '';
     list.innerHTML = insightsListHtml(insights);
-
-    const sheet = getPhoneSheet();
-    if (sheet?.isOpen && sheet.contentMode !== 'nav') {
-      sheet.setBody(insightsListHtml(insights));
-    }
   } catch (err) {
     console.warn('[insights] render failed', err);
   }
 }
 
-function initInsightsPhoneSheet() {
-  const btn = document.getElementById('insights-notify-btn');
-  if (!btn) return;
-  btn.addEventListener('click', async () => {
-    if (isPhone()) {
-      const sheet = getPhoneSheet();
-      if (!sheet) return;
-      sheet.setTitle('Insights');
-      try {
-        const insights = await loadInsights();
-        sheet.setBody(insightsListHtml(insights));
-      } catch (err) {
-        sheet.setBody('<p style="color:var(--text-muted); font-size:13px;">Could not load insights.</p>');
-        console.warn('[insights] sheet load failed', err);
-      }
-      sheet.open();
-      return;
-    }
-    document.getElementById('insights-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-}
-
-initInsightsPhoneSheet();
 initPhoneNavSheets();
 initPhoneBleSheet();
 

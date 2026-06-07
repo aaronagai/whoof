@@ -120,6 +120,8 @@
   --gutter:    20px;
   --sidebar-w: 240px;
   --topbar-h:  64px;
+  --topbar-glass-bg: rgba(7, 7, 10, 0.42);
+  --topbar-blur: 22px;
   --phone-max: 720px; /* must match js/util/phone.js PHONE_MAX_PX */
 
   /* Phone overlay stack — bottom nav always on top */
@@ -471,7 +473,8 @@ p  { margin: 0; }
 /* ───────────────────────────────────────────────── */
 
 main.content {
-  padding: 0 32px 80px 32px;
+  --content-pad-x: 32px;
+  padding: 0 var(--content-pad-x) 80px var(--content-pad-x);
   min-width: 0;
 }
 
@@ -483,9 +486,15 @@ main.content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 0;
-  background: linear-gradient(180deg, var(--bg) 60%, transparent);
-  backdrop-filter: saturate(140%) blur(8px);
+  /* Full-bleed frosted bar: span main.content horizontal padding */
+  margin-left: calc(-1 * var(--content-pad-x));
+  margin-right: calc(-1 * var(--content-pad-x));
+  padding-left: var(--content-pad-x);
+  padding-right: var(--content-pad-x);
+  background: var(--topbar-glass-bg);
+  -webkit-backdrop-filter: saturate(180%) blur(var(--topbar-blur));
+  backdrop-filter: saturate(180%) blur(var(--topbar-blur));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 .top-bar-left, .top-bar-right { display: flex; align-items: center; gap: 14px; }
 
@@ -517,37 +526,6 @@ main.content {
   color: var(--text-muted);
 }
 
-.icon-btn {
-  appearance: none;
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  width: 40px; height: 40px;
-  color: var(--text-muted);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 120ms, color 120ms;
-  position: relative;
-}
-.icon-btn:hover { background: var(--surface-2); color: var(--text); }
-.icon-btn svg { width: 18px; height: 18px; }
-.icon-btn .badge-count {
-  position: absolute;
-  top: -4px; right: -4px;
-  background: var(--bad);
-  color: white;
-  font-size: 10px;
-  font-weight: 700;
-  width: 18px; height: 18px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--bg);
-}
-
 .user-profile {
   display: flex;
   align-items: center;
@@ -570,7 +548,6 @@ main.content {
   align-items: center;
   justify-content: center;
   background: var(--surface-2);
-  border: 1px solid var(--border);
 }
 .avatar img {
   width: 32px;
@@ -607,20 +584,12 @@ main.content {
 }
 .welcome-text {
   margin: 0;
+  font-weight: 400;
   line-height: 1.1;
   background: linear-gradient(135deg, #FFFFFF, #B5B5BD);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-}
-.welcome-name {
-  font-family: var(--font-display);
-  font-size: 40px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-  margin-top: 4px;
-  color: var(--text);
 }
 
 .controls { display: flex; gap: 8px; }
@@ -718,7 +687,8 @@ main.content {
   .sidebar { display: none; }
 
   main.content {
-    padding: 12px 14px calc(var(--phone-nav-h) + 16px + var(--sa-bottom)) 14px; /* leave room for bottom nav */
+    --content-pad-x: 14px;
+    padding: 12px var(--content-pad-x) calc(var(--phone-nav-h) + 16px + var(--sa-bottom)) var(--content-pad-x); /* leave room for bottom nav */
   }
 
   /* Make topbar compact + respect status-bar inset */
@@ -727,6 +697,11 @@ main.content {
     min-height: var(--phone-topbar-min);
     padding-top: var(--sa-top);
     margin-bottom: var(--phone-topbar-gap);
+    /* Extend into body safe-area gutters so no bare bg strip shows */
+    margin-left: calc(-1 * var(--content-pad-x) - var(--sa-left));
+    margin-right: calc(-1 * var(--content-pad-x) - var(--sa-right));
+    padding-left: calc(var(--content-pad-x) + var(--sa-left));
+    padding-right: calc(var(--content-pad-x) + var(--sa-right));
   }
   .user-profile .user-info { display: none; }
   .user-profile { padding: 4px; }
@@ -735,16 +710,34 @@ main.content {
   /* Panel header: smaller hero, no right-aligned date hugging */
   .panel-header { padding: 8px 0 16px 0; flex-direction: column; align-items: flex-start; gap: 10px; }
   .panel-header h1 { font-size: 26px; }
-  .welcome-name { font-size: 30px; margin-top: 2px; }
   .panel-subtitle { font-size: 13px; }
   .panel-date { font-size: 11px; }
 
   /* All grids collapse to one column on phone */
-  .grid { grid-template-columns: 1fr; gap: 12px; }
+  .grid { grid-template-columns: 1fr; gap: 12px; justify-items: center; }
   .grid > .span-2, .grid > .span-3, .grid > .span-4 { grid-column: span 1; }
+  .grid > .card {
+    width: 100%;
+    max-width: 420px;
+  }
+  #plan-card { text-align: center; }
 
   /* Hero ring trio stacks; ring smaller */
-  .hero-ring-row { grid-template-columns: 1fr; gap: 12px; }
+  .hero-ring-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    justify-items: center;
+  }
+  .hero-ring-row .ring-card {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .hero-ring-row .ring-card .spark-wrap {
+    align-self: stretch;
+  }
   .ring-wrap { width: 180px; height: 180px; }
   .ring-wrap.big { width: 220px; height: 220px; }
   .ring-value .num { font-size: 56px; }
@@ -773,8 +766,18 @@ main.content {
   /* Settings drawer takes full width on mobile */
   .drawer { width: 100vw; max-width: 100vw; padding: 24px 20px calc(24px + var(--sa-bottom)) 20px; }
 
-  /* Reveal mobile bottom nav */
-  .mobile-nav { display: flex !important; }
+  /* Reveal mobile bottom nav — inset from screen edges */
+  .mobile-nav {
+    display: flex !important;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    bottom: var(--sa-bottom);
+    height: var(--phone-nav-h);
+    padding-bottom: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+  }
 
   /* Tab panels live in the pull-up sheet on phone — hide in main scroll area */
   #tab-panels-host,
@@ -787,18 +790,10 @@ main.content {
     display: block !important;
   }
 
-  /* Keep top bar tappable above sheet backdrop (insights, date) */
+  /* Keep top bar tappable above sheet backdrop */
   body.phone-sheet-open .top-bar {
     z-index: var(--z-phone-topbar);
   }
-
-  /* Larger touch targets for header actions on phone */
-  .icon-btn {
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
-  }
-  .icon-btn svg { width: 20px; height: 20px; }
 }
 
 /* Mobile bottom navigation — hidden on desktop, visible on phone */
@@ -840,19 +835,7 @@ main.content {
 }
 .mobile-nav .mtab svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .mobile-nav .mtab.active {
-  color: var(--accent, #03B5F3);
-}
-.mobile-nav .mtab.active::before {
-  content: "";
-  position: absolute;
-  top: 6px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--accent, #03B5F3);
-  box-shadow: 0 0 8px var(--strain-glow);
+  color: var(--text);
 }
 .mobile-nav .mtab:active { transform: scale(0.94); }
 
@@ -974,6 +957,12 @@ main.content {
   }
   .phone-sheet-body > .tab-panel .grid {
     gap: 10px;
+    justify-items: center;
+  }
+  .phone-sheet-body > .tab-panel .grid > .card,
+  .phone-sheet-body > .tab-panel .ring-card {
+    width: 100%;
+    max-width: 420px;
   }
   .phone-sheet-body > .tab-panel .card {
     padding: 14px 14px;
@@ -986,9 +975,16 @@ main.content {
   }
   .phone-sheet-body > .tab-panel .hero-ring-row {
     margin-top: 12px;
+    justify-items: center;
   }
   .phone-sheet-body > .tab-panel .ring-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     padding: 20px 16px 16px;
+  }
+  .phone-sheet-body > .tab-panel .ring-card .spark-wrap {
+    align-self: stretch;
   }
   .phone-sheet-body > .tab-panel .ring-wrap {
     width: 160px;
@@ -1036,7 +1032,14 @@ main.content {
   margin-top: 32px;
 }
 @media (max-width: 880px) {
-  .hero-ring-row { grid-template-columns: 1fr; }
+  .hero-ring-row {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+  .hero-ring-row .ring-card {
+    width: 100%;
+    max-width: 420px;
+  }
 }
 
 .ring-card {
@@ -1060,6 +1063,15 @@ main.content {
 .ring-card.recovery .ring-eyebrow { color: var(--recovery); }
 .ring-card.strain   .ring-eyebrow { color: var(--strain); }
 .ring-card.sleep    .ring-eyebrow { color: var(--sleep); }
+
+.ring-card-link {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s ease;
+}
+.ring-card-link:active {
+  opacity: 0.92;
+}
 
 .ring-wrap {
   position: relative;

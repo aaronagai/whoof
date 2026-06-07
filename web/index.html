@@ -225,13 +225,9 @@
   <!-- Top bar -->
   <header class="top-bar">
     <div class="top-bar-left">
-      <div class="date-pill"><span class="dot"></span><span id="topbar-date">Today</span></div>
+      <div class="date-pill"><span class="dot"></span><span id="topbar-date">—</span></div>
     </div>
     <div class="top-bar-right">
-      <button class="icon-btn" id="insights-notify-btn" type="button" title="Insights" aria-label="Insights">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
-        <span class="badge-count" id="topbar-insight-count">0</span>
-      </button>
       <div class="user-profile" id="profile-btn" role="button" tabindex="0" aria-label="Bluetooth and settings">
         <div class="avatar">
           <img id="profile-avatar" src="/usericon.png" alt="Profile" width="32" height="32">
@@ -249,8 +245,7 @@
     <header class="panel-header">
       <div>
         <div class="welcome-heading">
-          <h1 class="welcome-text">Good morning</h1>
-          <div class="welcome-name" id="welcome-name">Aaron</div>
+          <h1 class="welcome-text">Good morning, Aaron</h1>
         </div>
       </div>
       <span class="panel-date" id="overview-date"></span>
@@ -284,7 +279,7 @@
 
     <!-- Hero ring trio (Whoop signature) -->
     <div class="hero-ring-row">
-      <div class="ring-card sleep">
+      <div class="ring-card sleep ring-card-link" data-nav-tab="sleep" role="button" tabindex="0" aria-label="Open Sleep">
         <div class="ring-eyebrow">Sleep performance</div>
         <div class="ring-wrap"><svg id="sleep-ring" viewBox="0 0 300 300"></svg>
           <div class="ring-value">
@@ -296,7 +291,7 @@
         <div class="spark-wrap"><canvas id="sleep-sparkline" class="spark"></canvas></div>
       </div>
 
-      <div class="ring-card recovery">
+      <div class="ring-card recovery ring-card-link" data-nav-tab="recovery" role="button" tabindex="0" aria-label="Open Recovery">
         <div class="ring-eyebrow">Recovery</div>
         <div class="ring-wrap"><svg id="recovery-ring" viewBox="0 0 300 300"></svg>
           <div class="ring-value">
@@ -308,7 +303,7 @@
         <div class="spark-wrap"><canvas id="recovery-sparkline" class="spark"></canvas></div>
       </div>
 
-      <div class="ring-card strain">
+      <div class="ring-card strain ring-card-link" data-nav-tab="strain" role="button" tabindex="0" aria-label="Open Strain">
         <div class="ring-eyebrow">Day strain</div>
         <div class="ring-wrap"><svg id="strain-ring" viewBox="0 0 300 300"></svg>
           <div class="ring-value">
@@ -792,13 +787,13 @@
 
 <!-- Mobile bottom navigation — visible only on iPhone-width screens via CSS -->
 <nav class="mobile-nav" id="mobile-nav" aria-label="Primary">
-  <button class="mtab" data-tab="recovery" aria-label="Recovery">
-    <svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg>
-    Recovery
-  </button>
   <button class="mtab" data-tab="sleep" aria-label="Sleep">
     <svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
     Sleep
+  </button>
+  <button class="mtab" data-tab="recovery" aria-label="Recovery">
+    <svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg>
+    Recovery
   </button>
   <button class="mtab" data-tab="strain" aria-label="Strain">
     <svg viewBox="0 0 24 24"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg>
