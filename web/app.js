@@ -1580,4 +1580,141 @@ function init() {
 // Expose so the BLE/seed module can poke us after writing data.
 window.refreshAll = refreshAll;
 
+// --- ECG Monitor ---
+(function () {
+  const canvas = document.getElementById("ecg-canvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const W = 1200, H = 120;
+  canvas.width = W;
+  canvas.height = H;
+
+  let points = new Array(W).fill(H / 2);
+  let pos = 0;
+  let lastBpm = 0;
+  let soundOn = false;
+  let audioCtx = null;
+
+  const btn = document.getElementById("ecg-sound-btn");
+  btn.addEventListener("click", () => {
+    soundOn = !soundOn;
+    btn.textContent = soundOn ? "SOUND ON" : "SOUND OFF";
+    if (soundOn && !audioCtx) audioCtx = new AudioContext();
+  });
+
+  function beep() {
+    if (!soundOn || !audioCtx) return;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    o.frequency.value = 880;
+    g.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+    o.start(); o.stop(audioCtx.currentTime + 0.08);
+  }
+
+  // Generate a single ECG spike shape (P-QRS-T)
+  function ecgSpike() {
+    const shape = [];
+    const mid = H / 2;
+    // flat lead-in
+    for (let i = 0; i < 10; i++) shape.push(mid);
+    // P wave
+    for (let i = 0; i < 8; i++) shape.push(mid - 5 * Math.sin(Math.PI * i / 8));
+    // flat
+    for (let i = 0; i < 5; i++) shape.push(mid);
+    // Q dip
+    shape.push(mid + 6);
+    // R spike up
+    for (let i = 0; i < 5; i++) shape.push(mid - 55 * (i / 4));
+    // R spike down
+    for (let i = 0; i < 5; i++) shape.push(mid - 55 + (55 + 15) * (i / 4));
+    // S return
+    for (let i = 0; i < 4; i++) shape.push(mid + 15 - 15 * (i / 3));
+    // T wave
+    for (let i = 0; i < 12; i++) shape.push(mid - 12 * Math.sin(Math.PI * i / 12));
+    // flat tail
+    for (let i = 0; i < 10; i++) shape.push(mid);
+    return shape;
+  }
+
+  let spikeQueue = [];
+  let spikeFrame = 0;
+  let lastSpikeTime = 0;
+
+  function scheduleSpikeFromBpm(bpm) {
+    if (bpm < 20 || bpm > 250) return;
+    const interval = (60 / bpm) * 1000;
+    const now = Date.now();
+    if (now - lastSpikeTime >= interval * 0.9) {
+      spikeQueue = ecgSpike();
+      spikeFrame = 0;
+      lastSpikeTime = now;
+      beep();
+    }
+  }
+
+  function draw() {
+    // Advance one pixel per frame
+    if (spikeQueue.length > 0 && spikeFrame < spikeQueue.length) {
+      points[pos] = spikeQueue[spikeFrame++];
+    } else {
+      points[pos] = H / 2;
+    }
+
+    // Clear ahead of the cursor
+    const clearW = 12;
+    for (let i = 0; i < clearW; i++) points[(pos + i) % W] = -1;
+
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, W, H);
+
+    // Draw grid
+    ctx.strokeStyle = "#003300";
+    ctx.lineWidth = 0.5;
+    for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 0; y < H; y += 20) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+    // Draw ECG line
+    ctx.strokeStyle = "#00ff44";
+    ctx.lineWidth = 2;
+    ctx.shadowColor = "#00ff44";
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i < W; i++) {
+      const x = i;
+      const idx = (pos + 1 + i) % W;
+      if (points[idx] === -1) { started = false; continue; }
+      if (!started) { ctx.moveTo(x, points[idx]); started = true; }
+      else ctx.lineTo(x, points[idx]);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    pos = (pos + 1) % W;
+    requestAnimationFrame(draw);
+  }
+
+  draw();
+
+  // Hook into live HR updates
+  const origRefresh = window.refreshAll;
+  window.refreshAll = async function () {
+    await origRefresh();
+    const hrEl = document.getElementById("live-hr");
+    if (hrEl) {
+      const bpm = parseInt(hrEl.textContent);
+      if (!isNaN(bpm) && bpm !== lastBpm) {
+        lastBpm = bpm;
+        document.getElementById("ecg-bpm").childNodes[0].textContent = bpm + " ";
+      }
+      scheduleSpikeFromBpm(lastBpm);
+    }
+  };
+
+  // Also tick independently so animation runs even between refreshes
+  setInterval(() => scheduleSpikeFromBpm(lastBpm), 100);
+})();
+
 document.addEventListener("DOMContentLoaded", init);
