@@ -1632,7 +1632,7 @@ function init() {
 window.refreshAll = refreshAll;
 window.setTab = setTab;
 
-// --- ECG Monitor ---
+// --- ECG Monitor (RR-driven) ---
 (function () {
   const canvas = document.getElementById("ecg-canvas");
   if (!canvas) return;
@@ -1641,11 +1641,17 @@ window.setTab = setTab;
   canvas.width = W;
   canvas.height = H;
 
-  let points = new Array(W).fill(H / 2);
+  const mid = H / 2;
+  let points = new Array(W).fill(mid);
   let pos = 0;
-  let lastBpm = 0;
   let soundOn = false;
   let audioCtx = null;
+  let currentBpm = 0;
+
+  // Queue of scheduled spikes: [{fireAt, rrMs}]
+  let spikeSchedule = [];
+  let spikeQueue = [];
+  let spikeFrame = 0;
 
   const btn = document.getElementById("ecg-sound-btn");
   btn.addEventListener("click", () => {
@@ -1665,69 +1671,67 @@ window.setTab = setTab;
     o.start(); o.stop(audioCtx.currentTime + 0.08);
   }
 
-  // Generate a single ECG spike shape (P-QRS-T)
   function ecgSpike() {
     const shape = [];
-    const mid = H / 2;
-    // flat lead-in
     for (let i = 0; i < 10; i++) shape.push(mid);
-    // P wave
     for (let i = 0; i < 8; i++) shape.push(mid - 5 * Math.sin(Math.PI * i / 8));
-    // flat
     for (let i = 0; i < 5; i++) shape.push(mid);
-    // Q dip
     shape.push(mid + 6);
-    // R spike up
     for (let i = 0; i < 5; i++) shape.push(mid - 55 * (i / 4));
-    // R spike down
-    for (let i = 0; i < 5; i++) shape.push(mid - 55 + (55 + 15) * (i / 4));
-    // S return
+    for (let i = 0; i < 5; i++) shape.push(mid - 55 + 70 * (i / 4));
     for (let i = 0; i < 4; i++) shape.push(mid + 15 - 15 * (i / 3));
-    // T wave
     for (let i = 0; i < 12; i++) shape.push(mid - 12 * Math.sin(Math.PI * i / 12));
-    // flat tail
     for (let i = 0; i < 10; i++) shape.push(mid);
     return shape;
   }
 
-  let spikeQueue = [];
-  let spikeFrame = 0;
-  let lastSpikeTime = 0;
+  // Called by app-mvp.js with each real RR interval in ms
+  window.ecgFeedRR = function (rrMs) {
+    if (!rrMs || rrMs < 300 || rrMs > 2000) return;
+    const bpm = Math.round(60000 / rrMs);
+    currentBpm = bpm;
+    const bpmEl = document.getElementById("ecg-bpm");
+    if (bpmEl) bpmEl.childNodes[0].textContent = bpm + " ";
+    // Schedule next spike now
+    spikeSchedule.push({ fireAt: Date.now(), rrMs });
+  };
 
-  function scheduleSpikeFromBpm(bpm) {
-    if (bpm < 20 || bpm > 250) return;
-    const interval = (60 / bpm) * 1000;
-    const now = Date.now();
-    if (now - lastSpikeTime >= interval * 0.9) {
-      spikeQueue = ecgSpike();
-      spikeFrame = 0;
-      lastSpikeTime = now;
-      beep();
-    }
-  }
+  let lastFireTime = 0;
 
   function draw() {
-    // Advance one pixel per frame
-    if (spikeQueue.length > 0 && spikeFrame < spikeQueue.length) {
-      points[pos] = spikeQueue[spikeFrame++];
-    } else {
-      points[pos] = H / 2;
+    const now = Date.now();
+
+    // Fire any due spikes
+    while (spikeSchedule.length && spikeSchedule[0].fireAt <= now) {
+      const s = spikeSchedule.shift();
+      // Only trigger if enough time has passed (debounce duplicate RRs)
+      if (now - lastFireTime >= s.rrMs * 0.7) {
+        spikeQueue = ecgSpike();
+        spikeFrame = 0;
+        lastFireTime = now;
+        beep();
+      }
     }
 
-    // Clear ahead of the cursor
-    const clearW = 12;
-    for (let i = 0; i < clearW; i++) points[(pos + i) % W] = -1;
+    // Advance ECG line
+    if (spikeFrame < spikeQueue.length) {
+      points[pos] = spikeQueue[spikeFrame++];
+    } else {
+      points[pos] = mid;
+    }
 
+    // Erase ahead of cursor
+    for (let i = 0; i < 12; i++) points[(pos + i) % W] = -1;
+
+    // Render
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, W, H);
 
-    // Draw grid
     ctx.strokeStyle = "#003300";
     ctx.lineWidth = 0.5;
     for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
     for (let y = 0; y < H; y += 20) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
 
-    // Draw ECG line
     ctx.strokeStyle = "#00ff44";
     ctx.lineWidth = 2;
     ctx.shadowColor = "#00ff44";
@@ -1735,11 +1739,10 @@ window.setTab = setTab;
     ctx.beginPath();
     let started = false;
     for (let i = 0; i < W; i++) {
-      const x = i;
       const idx = (pos + 1 + i) % W;
       if (points[idx] === -1) { started = false; continue; }
-      if (!started) { ctx.moveTo(x, points[idx]); started = true; }
-      else ctx.lineTo(x, points[idx]);
+      if (!started) { ctx.moveTo(i, points[idx]); started = true; }
+      else ctx.lineTo(i, points[idx]);
     }
     ctx.stroke();
     ctx.shadowBlur = 0;
@@ -1749,24 +1752,6 @@ window.setTab = setTab;
   }
 
   draw();
-
-  // Hook into live HR updates
-  const origRefresh = window.refreshAll;
-  window.refreshAll = async function () {
-    await origRefresh();
-    const hrEl = document.getElementById("live-hr");
-    if (hrEl) {
-      const bpm = parseInt(hrEl.textContent);
-      if (!isNaN(bpm) && bpm !== lastBpm) {
-        lastBpm = bpm;
-        document.getElementById("ecg-bpm").childNodes[0].textContent = bpm + " ";
-      }
-      scheduleSpikeFromBpm(lastBpm);
-    }
-  };
-
-  // Also tick independently so animation runs even between refreshes
-  setInterval(() => scheduleSpikeFromBpm(lastBpm), 100);
 })();
 
 document.addEventListener("DOMContentLoaded", init);

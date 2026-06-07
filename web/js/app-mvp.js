@@ -164,6 +164,13 @@ async function setupAndConnect(deviceToUse = null) {
     if (rrList.length) {
       const mvpRr = document.getElementById('mvp-rr');
       if (mvpRr) mvpRr.textContent = rrList[0];
+      // Feed real RR intervals to ECG monitor
+      if (window.ecgFeedRR) {
+        for (const rr of rrList) window.ecgFeedRR(rr);
+      }
+    } else if (hr != null && window.ecgFeedRR) {
+      // Fallback: no RR available, derive interval from BPM
+      window.ecgFeedRR(Math.round(60000 / hr));
     }
     const nowAgo = document.getElementById('now-ago');
     if (nowAgo) nowAgo.textContent = 'live';
