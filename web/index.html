@@ -256,13 +256,7 @@
       <span class="panel-date" id="overview-date"></span>
     </header>
 
-    <!-- "My Day" section — live biometrics first -->
-    <div style="display:flex; align-items:center; justify-content:space-between; margin: 0 0 16px 0;">
-      <h2>My day</h2>
-      <span class="eyebrow">live · biometrics</span>
-    </div>
-
-    <div class="grid">
+    <div class="grid" style="margin: 0 0 16px 0;">
       <div class="card span-4">
         <span class="card-eyebrow">Live heart rate</span>
         <div class="now-tile" style="grid-template-columns: auto 1fr; gap: 24px;">
@@ -282,85 +276,174 @@
       </div>
     </div>
 
-    <!-- Hero ring trio (Whoop signature) -->
-    <div class="hero-ring-row">
-      <div class="ring-card sleep ring-card-link" data-nav-tab="sleep" role="button" tabindex="0" aria-label="Open Sleep">
-        <div class="ring-eyebrow">Sleep performance</div>
-        <div class="ring-wrap"><svg id="sleep-ring" viewBox="0 0 300 300"></svg>
-          <div class="ring-value">
-            <div class="num"><span id="sleep-ring-num">—</span><span class="unit">%</span></div>
-            <div class="sub" id="sleep-perf">— need fulfillment</div>
+    <!-- Sleep / Recovery / Strain — three progress rings (Today overview) -->
+    <div class="metric-rings-card">
+      <div class="metric-ring-col sleep ring-card-link" data-nav-tab="sleep" role="button" tabindex="0" aria-label="Open Sleep">
+        <div class="metric-ring-label">Sleep</div>
+        <div class="metric-ring-wrap">
+          <svg id="sleep-ring" viewBox="0 0 200 200" aria-hidden="true"></svg>
+          <div class="metric-ring-value">
+            <span class="metric-ring-num" id="sleep-ring-num">—</span>
+            <span class="metric-ring-denom" id="sleep-ring-denom">/100</span>
           </div>
         </div>
-        <div class="ring-foot" id="sleep-ring-foot"></div>
-        <div class="spark-wrap"><canvas id="sleep-sparkline" class="spark"></canvas></div>
+        <div class="metric-ring-foot" id="sleep-ring-foot">—</div>
       </div>
 
-      <div class="ring-card recovery ring-card-link" data-nav-tab="recovery" role="button" tabindex="0" aria-label="Open Recovery">
-        <div class="ring-eyebrow">Recovery</div>
-        <div class="ring-wrap"><svg id="recovery-ring" viewBox="0 0 300 300"></svg>
-          <div class="ring-value">
-            <div class="num big"><span id="recovery-ring-num">—</span><span class="unit">%</span></div>
-            <div class="sub" id="recovery-meta">—</div>
+      <div class="metric-ring-col recovery ring-card-link" data-nav-tab="recovery" role="button" tabindex="0" aria-label="Open Recovery">
+        <div class="metric-ring-label">Recovery</div>
+        <div class="metric-ring-wrap">
+          <svg id="recovery-ring" viewBox="0 0 200 200" aria-hidden="true"></svg>
+          <div class="metric-ring-value">
+            <span class="metric-ring-num" id="recovery-ring-num">—</span>
+            <span class="metric-ring-denom" id="recovery-ring-denom">/100</span>
           </div>
         </div>
-        <div class="ring-foot" id="recovery-ring-foot"></div>
-        <div class="spark-wrap"><canvas id="recovery-sparkline" class="spark"></canvas></div>
+        <div class="metric-ring-foot" id="recovery-ring-foot">—</div>
       </div>
 
-      <div class="ring-card strain ring-card-link" data-nav-tab="strain" role="button" tabindex="0" aria-label="Open Strain">
-        <div class="ring-eyebrow">Day strain</div>
-        <div class="ring-wrap"><svg id="strain-ring" viewBox="0 0 300 300"></svg>
-          <div class="ring-value">
-            <div class="num"><span id="strain-ring-num">—</span></div>
-            <div class="sub" id="strain-meta">— · 0 kcal</div>
+      <div class="metric-ring-col strain ring-card-link" data-nav-tab="strain" role="button" tabindex="0" aria-label="Open Strain">
+        <div class="metric-ring-label">Strain</div>
+        <div class="metric-ring-wrap">
+          <svg id="strain-ring" viewBox="0 0 200 200" aria-hidden="true"></svg>
+          <div class="metric-ring-value">
+            <span class="metric-ring-num" id="strain-ring-num">—</span>
+            <span class="metric-ring-denom" id="strain-ring-denom">/21</span>
           </div>
         </div>
-        <div class="ring-foot" id="strain-ring-foot"></div>
-        <div class="spark-wrap"><canvas id="strain-sparkline" class="spark"></canvas></div>
+        <div class="metric-ring-foot" id="strain-ring-foot">—</div>
       </div>
     </div>
 
     <div class="grid">
-      <div class="card span-2" id="wake-alarm-card">
-        <span class="card-eyebrow">⏰ Wake alarm</span>
-        <div style="display:flex; align-items:baseline; gap:10px; margin-top:6px;">
-          <input id="wake-alarm-time" type="time" value="07:00"
-                 style="background:var(--card); color:var(--fg); border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-size:28px; font-weight:700; font-family:var(--font-display); font-variant-numeric:tabular-nums; letter-spacing:-0.5px; width:auto;"/>
-          <span id="wake-alarm-when" style="font-size:11px; color:var(--muted);">Tomorrow morning</span>
+      <div class="card span-4 overview-accordion" id="overview-accordion">
+        <div class="overview-accordion-item" data-section="wake">
+          <button
+            class="overview-accordion-header"
+            id="overview-acc-wake-header"
+            aria-expanded="false"
+            aria-controls="overview-acc-wake-panel"
+          >
+            <div class="overview-accordion-title">
+              <span class="overview-accordion-label">Wake alarm</span>
+              <span class="overview-accordion-subtitle" id="overview-acc-wake-summary">Set your smart wake time</span>
+            </div>
+            <span class="overview-accordion-chevron" aria-hidden="true">▾</span>
+          </button>
+          <div
+            class="overview-accordion-panel"
+            id="overview-acc-wake-panel"
+            role="region"
+            aria-labelledby="overview-acc-wake-header"
+            hidden
+          >
+            <div class="card overview-accordion-card" id="wake-alarm-card">
+              <span class="card-eyebrow">⏰ Wake alarm</span>
+              <div style="display:flex; align-items:baseline; gap:10px; margin-top:6px;">
+                <input id="wake-alarm-time" type="time" value="07:00"
+                       style="background:var(--card); color:var(--fg); border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-size:28px; font-weight:700; font-family:var(--font-display); font-variant-numeric:tabular-nums; letter-spacing:-0.5px; width:auto;"/>
+                <span id="wake-alarm-when" style="font-size:11px; color:var(--muted);">Tomorrow morning</span>
+              </div>
+              <div style="display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;">
+                <button id="wake-alarm-set" class="primary" style="flex:1; min-width:90px;">Set alarm</button>
+                <button id="wake-alarm-off" style="font-size:11px;">Disable</button>
+                <button id="wake-alarm-test" style="font-size:11px;" title="Buzz the strap now to test">Test buzz</button>
+              </div>
+              <div id="wake-alarm-status" style="font-size:11px; color:var(--muted); margin-top:8px; min-height:1.2em;">Connect your strap to arm an alarm.</div>
+              <div style="border-top:1px solid var(--border); margin-top:10px; padding-top:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                <div style="font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;">Strap clock</div>
+                <div id="wake-clock-drift" style="font-size:11px; font-variant-numeric:tabular-nums; color:var(--muted);">—</div>
+                <button id="wake-clock-sync" style="font-size:10px;" title="Resync the strap's RTC to this device's clock">Resync</button>
+              </div>
+            </div>
+          </div>
         </div>
-        <div style="display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;">
-          <button id="wake-alarm-set" class="primary" style="flex:1; min-width:90px;">Set alarm</button>
-          <button id="wake-alarm-off" style="font-size:11px;">Disable</button>
-          <button id="wake-alarm-test" style="font-size:11px;" title="Buzz the strap now to test">Test buzz</button>
+
+        <div class="overview-accordion-item" data-section="plan">
+          <button
+            class="overview-accordion-header"
+            id="overview-acc-plan-header"
+            aria-expanded="true"
+            aria-controls="overview-acc-plan-panel"
+          >
+            <div class="overview-accordion-title">
+              <span class="overview-accordion-label">Today's plan</span>
+              <span class="overview-accordion-subtitle" id="overview-acc-plan-summary">Daily recommendation</span>
+            </div>
+            <span class="overview-accordion-chevron" aria-hidden="true">▾</span>
+          </button>
+          <div
+            class="overview-accordion-panel"
+            id="overview-acc-plan-panel"
+            role="region"
+            aria-labelledby="overview-acc-plan-header"
+          >
+            <div class="card card-plan overview-accordion-card" id="plan-card">
+              <span class="card-eyebrow">Today's plan</span>
+              <div class="plan-illust" id="plan-zone">🛌</div>
+              <div id="plan-label">—</div>
+              <div id="plan-message">Connect your strap to see today's personalised recommendation.</div>
+              <div id="plan-target"></div>
+            </div>
+          </div>
         </div>
-        <div id="wake-alarm-status" style="font-size:11px; color:var(--muted); margin-top:8px; min-height:1.2em;">Connect your strap to arm an alarm.</div>
-        <div style="border-top:1px solid var(--border); margin-top:10px; padding-top:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
-          <div style="font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;">Strap clock</div>
-          <div id="wake-clock-drift" style="font-size:11px; font-variant-numeric:tabular-nums; color:var(--muted);">—</div>
-          <button id="wake-clock-sync" style="font-size:10px;" title="Resync the strap's RTC to this device's clock">Resync</button>
+
+        <div class="overview-accordion-item" data-section="insights">
+          <button
+            class="overview-accordion-header"
+            id="overview-acc-insights-header"
+            aria-expanded="false"
+            aria-controls="overview-acc-insights-panel"
+          >
+            <div class="overview-accordion-title">
+              <span class="overview-accordion-label">Insights</span>
+              <span class="overview-accordion-subtitle" id="overview-acc-insights-summary">Key takeaways for today</span>
+            </div>
+            <span class="overview-accordion-chevron" aria-hidden="true">▾</span>
+          </button>
+          <div
+            class="overview-accordion-panel"
+            id="overview-acc-insights-panel"
+            role="region"
+            aria-labelledby="overview-acc-insights-header"
+            hidden
+          >
+            <div class="card card-insights overview-accordion-card" id="insights-card">
+              <span class="card-eyebrow">Insights</span>
+              <div id="insights-list" style="display:flex; flex-direction:column; gap:8px; margin-top:6px;"></div>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div class="card card-plan span-2" id="plan-card">
-        <span class="card-eyebrow">Today's plan</span>
-        <div class="plan-illust" id="plan-zone">🛌</div>
-        <div id="plan-label">—</div>
-        <div id="plan-message">Connect your strap to see today's personalised recommendation.</div>
-        <div id="plan-target"></div>
-      </div>
-
-      <div class="card card-insights span-2" id="insights-card">
-        <span class="card-eyebrow">Insights</span>
-        <div id="insights-list" style="display:flex; flex-direction:column; gap:8px; margin-top:6px;"></div>
-      </div>
-
-      <div class="card span-2">
-        <span class="card-eyebrow">Recent activity</span>
-        <div class="workout-list" id="overview-workouts">
-          <div class="empty-state">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18 L 10 14 L 14 17 L 19 8"/><circle cx="6" cy="18" r="1.5" fill="currentColor"/><circle cx="10" cy="14" r="1.5" fill="currentColor"/><circle cx="14" cy="17" r="1.5" fill="currentColor"/><circle cx="19" cy="8" r="1.5" fill="currentColor"/></svg>
-            No workouts detected yet.
+        <div class="overview-accordion-item" data-section="recent">
+          <button
+            class="overview-accordion-header"
+            id="overview-acc-recent-header"
+            aria-expanded="false"
+            aria-controls="overview-acc-recent-panel"
+          >
+            <div class="overview-accordion-title">
+              <span class="overview-accordion-label">Recent activity</span>
+              <span class="overview-accordion-subtitle" id="overview-acc-recent-summary">Latest detected workouts</span>
+            </div>
+            <span class="overview-accordion-chevron" aria-hidden="true">▾</span>
+          </button>
+          <div
+            class="overview-accordion-panel"
+            id="overview-acc-recent-panel"
+            role="region"
+            aria-labelledby="overview-acc-recent-header"
+            hidden
+          >
+            <div class="card overview-accordion-card">
+              <span class="card-eyebrow">Recent activity</span>
+              <div class="workout-list" id="overview-workouts">
+                <div class="empty-state">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18 L 10 14 L 14 17 L 19 8"/><circle cx="6" cy="18" r="1.5" fill="currentColor"/><circle cx="10" cy="14" r="1.5" fill="currentColor"/><circle cx="14" cy="17" r="1.5" fill="currentColor"/><circle cx="19" cy="8" r="1.5" fill="currentColor"/></svg>
+                  No workouts detected yet.
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

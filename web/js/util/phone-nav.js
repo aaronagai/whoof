@@ -1,6 +1,7 @@
 import { isPhone, phoneMediaQuery } from "./phone.js";
 import { getPhoneSheet } from "./phone-sheet.js";
 import {
+  ensureTodayInCarousel,
   initPhoneLiveCarousel,
   isPhoneLivePageOpen,
   showPhoneHomePage,
@@ -12,6 +13,17 @@ export const MOBILE_NAV_TABS = ["sleep", "recovery", "strain", "trends"];
 
 /** Phone homepage tab — shown in main content, not the bottom nav or pull-up sheet. */
 export const PHONE_HOME_TAB = "overview";
+
+/** Tab panel order in index.html — keeps DOM stable after phone → desktop. */
+const DESKTOP_TAB_ORDER = [
+  "overview",
+  "recovery",
+  "sleep",
+  "strain",
+  "trends",
+  "live",
+  "coach",
+];
 
 const TAB_TITLES = {
   overview: "Today",
@@ -52,24 +64,38 @@ export function restorePhoneNavPanel() {
   sheet?.setContentMode(null);
 }
 
-/** Keep Today/Overview in main.content (homepage), not the hidden host or sheet. */
+/** Keep Today/Overview in the visible phone carousel slide (or main on desktop). */
 function restoreOverviewToMain() {
-  const panel = getPanel(PHONE_HOME_TAB);
-  const main = document.querySelector("main.content");
-  if (!panel || !main) return;
-
-  const carouselHome = document.querySelector(
-    `.phone-page-slide[data-phone-page="${PHONE_HOME_TAB}"]`
-  );
-  if (carouselHome && !carouselHome.contains(panel)) {
-    carouselHome.appendChild(panel);
+  if (isPhone()) {
+    ensureTodayInCarousel();
     return;
   }
+  restoreDesktopPanels();
+}
 
-  if (panel.parentElement === main) return;
-  const topBar = main.querySelector(".top-bar");
-  if (topBar?.nextElementSibling) main.insertBefore(panel, topBar.nextElementSibling);
-  else main.prepend(panel);
+/**
+ * On desktop, tab panels must be direct children of main.content. Phone nav/sheet
+ * and #tab-panels-host (hidden) leave panels invisible after a viewport resize.
+ */
+export function restoreDesktopPanels() {
+  if (isPhone()) return;
+
+  restorePhoneNavPanel();
+
+  const main = document.querySelector("main.content");
+  if (!main) return;
+
+  const anchor =
+    main.querySelector("#phone-page-carousel") || main.querySelector(".top-bar");
+  if (!anchor) return;
+
+  let insertAfter = anchor;
+  for (const tab of DESKTOP_TAB_ORDER) {
+    const panel = getPanel(tab);
+    if (!panel) continue;
+    insertAfter.insertAdjacentElement("afterend", panel);
+    insertAfter = panel;
+  }
 }
 
 /** Phone homepage: close overlays and show Today in the main scroll area. */
@@ -140,6 +166,7 @@ export function initPhoneNavSheets() {
     if (sheet.contentMode !== "nav") return;
     const wasTab = mountedTab;
     restorePhoneNavPanel();
+    ensureTodayInCarousel();
     if (wasTab && wasTab !== PHONE_HOME_TAB) {
       window.setTab?.(PHONE_HOME_TAB);
     }
@@ -163,7 +190,10 @@ export function initPhoneNavSheets() {
   };
 
   window.whoofAfterSetTab = (tab) => {
-    if (!isPhone()) return;
+    if (!isPhone()) {
+      restoreDesktopPanels();
+      return;
+    }
     if (tab === PHONE_HOME_TAB) {
       showPhoneHomeTab();
       return;
@@ -178,6 +208,9 @@ export function initPhoneNavSheets() {
   };
 
   window.whoofRestoreNavPanel = restorePhoneNavPanel;
+  window.whoofRestoreDesktopPanels = restoreDesktopPanels;
+
+  if (!isPhone()) restoreDesktopPanels();
 
   document.getElementById("topbar-live-btn")?.addEventListener("click", () => {
     if (!isPhone()) {
@@ -193,7 +226,8 @@ export function initPhoneNavSheets() {
 
   /** Hero ring cards on Today → open the matching nav pull-up sheet on phone. */
   document.querySelectorAll(
-    `.tab-panel[data-panel="${PHONE_HOME_TAB}"] .ring-card-link[data-nav-tab]`
+    `.tab-panel[data-panel="${PHONE_HOME_TAB}"] .ring-card-link[data-nav-tab],` +
+    `.tab-panel[data-panel="${PHONE_HOME_TAB}"] .metric-ring-col.ring-card-link[data-nav-tab]`
   ).forEach((card) => {
     const tab = card.dataset.navTab;
     if (!tab || !MOBILE_NAV_TABS.includes(tab)) return;
@@ -210,8 +244,7 @@ export function initPhoneNavSheets() {
 
   phoneMediaQuery().addEventListener("change", (ev) => {
     if (!ev.matches) {
-      restorePhoneNavPanel();
-      restoreOverviewToMain();
+      restoreDesktopPanels();
       window.whoofRestoreBlePanel?.();
       sheet.close();
       showPhoneHomePage();

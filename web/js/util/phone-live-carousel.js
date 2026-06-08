@@ -12,6 +12,37 @@ function getPanel(tab) {
   return document.querySelector(`.tab-panel[data-panel="${tab}"]`);
 }
 
+function getHomeSlide() {
+  return document.querySelector(`.phone-page-slide[data-phone-page="${HOME_TAB}"]`);
+}
+
+function getLiveSlide() {
+  return document.querySelector(`.phone-page-slide[data-phone-page="${LIVE_TAB}"]`);
+}
+
+/**
+ * On phone, Today must live inside the carousel home slide — direct children of
+ * main.content are hidden by CSS and appear as a black screen.
+ */
+export function ensureTodayInCarousel() {
+  if (!isPhone()) return false;
+  if (!ensureCarousel()) return false;
+
+  const overview = getPanel(HOME_TAB);
+  const live = getPanel(LIVE_TAB);
+  const homeSlide = getHomeSlide();
+  const liveSlide = getLiveSlide();
+  if (!overview || !homeSlide) return false;
+
+  if (!homeSlide.contains(overview)) {
+    homeSlide.appendChild(overview);
+  }
+  if (live && liveSlide && !liveSlide.contains(live)) {
+    liveSlide.appendChild(live);
+  }
+  return true;
+}
+
 function ensurePanelHost() {
   let host = document.getElementById("tab-panels-host");
   if (!host) {
@@ -61,6 +92,7 @@ function ensureCarousel() {
 
   carouselReady = true;
   if (liveOpen) carousel.classList.add("is-live");
+  ensureTodayInCarousel();
   window.whoofTopbarScrollRefresh?.();
   return true;
 }
@@ -113,7 +145,13 @@ export function showPhoneLivePage() {
 }
 
 export function showPhoneHomePage() {
-  if (!liveOpen) return;
+  ensureTodayInCarousel();
+
+  if (!liveOpen) {
+    window.whoofTopbarScrollRefresh?.();
+    return;
+  }
+
   liveOpen = false;
   carousel?.classList.remove("is-live");
   document.body.classList.remove("phone-live-page");
@@ -125,12 +163,21 @@ export function showPhoneHomePage() {
 }
 
 export function initPhoneLiveCarousel() {
-  if (isPhone()) ensureCarousel();
+  if (isPhone()) {
+    ensureCarousel();
+    ensureTodayInCarousel();
+  }
 
   window.whoofShowPhoneLivePage = showPhoneLivePage;
   window.whoofShowPhoneHomePage = showPhoneHomePage;
+  window.whoofEnsureTodayInCarousel = ensureTodayInCarousel;
 
   phoneMediaQuery().addEventListener("change", (ev) => {
-    if (!ev.matches) teardownCarousel();
+    if (ev.matches) {
+      ensureCarousel();
+      ensureTodayInCarousel();
+    } else {
+      teardownCarousel();
+    }
   });
 }

@@ -394,21 +394,43 @@ function commonOpts(extra = {}) {
 /* ───────────────────────────── Recovery ring (SVG) ─────────────────── */
 
 /**
+ * Full-circle progress ring (reference-style): dark track + colored stroke, round caps.
+ * @param {SVGElement} svg
+ * @param {number|null} score
+ * @param {string} color
+ * @param {number} maxVal
+ * @param {Object} [opts]
+ * @param {number} [opts.stroke=12]
+ * @param {string} [opts.trackColor]
+ */
+function drawProgressRing(svg, score, color, maxVal = 100, opts = {}) {
+  if (!svg) return;
+  const stroke = opts.stroke ?? 12;
+  const trackColor = opts.trackColor ?? "rgba(255,255,255,0.08)";
+  const size = 200;
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = (size - stroke) / 2 - 2;
+  const pct = score == null ? 0 : Math.max(0, Math.min(maxVal, score)) / maxVal;
+  const circ = 2 * Math.PI * r;
+  const dash = pct * circ;
+
+  svg.setAttribute("viewBox", `0 0 ${size} ${size}`);
+  svg.innerHTML = `
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${trackColor}" stroke-width="${stroke}" />
+    ${pct > 0 ? `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
+      stroke-linecap="round" stroke-dasharray="${dash} ${circ}" transform="rotate(-90 ${cx} ${cy})" />` : ""}
+  `;
+}
+
+/**
  * Draw a thin Whoop-style ring (270° arc) into an SVG element.
  *
- * The ring is purely visual — numeric value and label are rendered in
- * HTML overlay siblings so they get crisp web typography. The arc itself
- * gets a soft glow via SVG <filter>, plus a subtle pulse animation on
- * the head cap when the value is non-zero.
- *
  * @param {SVGElement} svg
- * @param {number|null} score  value (or null for empty ring)
- * @param {string}      color  primary stroke color (gradient endpoint)
- * @param {number}      maxVal scale ceiling (e.g. 100 for %, 21 for strain)
- * @param {Object}      [opts]
- * @param {number}      [opts.stroke=18]
- * @param {string}      [opts.colorTo] optional gradient endpoint
- * @param {boolean}     [opts.glow=true]
+ * @param {number|null} score
+ * @param {string} color
+ * @param {number} maxVal
+ * @param {Object} [opts]
  */
 function drawRing(svg, score, color, maxVal = 100, opts = {}) {
   if (!svg) return;
@@ -585,84 +607,57 @@ async function loadOverview() {
   const m = overview.metrics || {};
   const trend7 = overview.trend7 || [];
 
-  // ─── Sleep ring (blue) ─────────────────────────────────────────
+  // ─── Sleep / Recovery / Strain rings (full-circle overview card) ─
+  const hasSleep = m.sleep_minutes != null && m.sleep_minutes > 0;
+  const sleepPerf = hasSleep ? m.sleep_performance_pct : null;
+  const hasRec = m.recovery_score != null && m.recovery_score > 0 && m.rmssd_ms != null;
+  const recScore = hasRec ? m.recovery_score : null;
+  const strainVal = m.strain_score;
+  const strainBudget = recScore != null ? (recScore / 100) * 21 : 21;
+
   if ($("sleep-ring")) {
-    // Treat 0 sleep minutes as "no data" — rollup writes zeros when no sleep window detected
-    const hasSleep = m.sleep_minutes != null && m.sleep_minutes > 0;
-    const sleepPerf = hasSleep ? m.sleep_performance_pct : null;
-    drawRing($("sleep-ring"), sleepPerf, "#819BFF", 100, { stroke: 18, colorTo: "#4D7CFF" });
-    const asleep = m.sleep_minutes || 0;
-    const hours = Math.floor(asleep / 60), mins = asleep % 60;
+    drawProgressRing($("sleep-ring"), sleepPerf, COLORS.sleep, 100, { stroke: 11 });
     if ($("sleep-ring-num")) {
       $("sleep-ring-num").textContent = hasSleep ? Math.round(sleepPerf) : "—";
       $("sleep-ring-num").style.color = hasSleep ? "var(--text)" : "var(--text-faint)";
     }
-    if ($("sleep-perf")) {
-      $("sleep-perf").textContent = hasSleep ? "of sleep need met" : "no sleep recorded";
-    }
+    if ($("sleep-ring-denom")) $("sleep-ring-denom").textContent = "/100";
     if ($("sleep-ring-foot")) {
-      $("sleep-ring-foot").innerHTML = hasSleep
-        ? `<span><strong>${hours}h ${mins}m</strong> asleep</span>`
-        : `<span>Wear strap overnight to record sleep</span>`;
+      $("sleep-ring-foot").textContent = hasSleep
+        ? `${Math.max(0, 100 - Math.round(sleepPerf))}% left`
+        : "Wear strap overnight";
     }
   }
 
-  // ─── Recovery ring (green/yellow/red) ──────────────────────────
   if ($("recovery-ring")) {
-    // Treat recovery_score=0 with no HRV as "no data" (rollup writes 0 when no overnight HRV)
-    const hasRec = m.recovery_score != null && m.recovery_score > 0 && m.rmssd_ms != null;
-    const recScore = hasRec ? m.recovery_score : null;
-    const color = recoveryColor(recScore);
-    drawRing($("recovery-ring"), recScore, color, 100, { stroke: 22 });
+    const recColor = recoveryColor(recScore);
+    drawProgressRing($("recovery-ring"), recScore, recColor, 100, { stroke: 11 });
     if ($("recovery-ring-num")) {
       $("recovery-ring-num").textContent = hasRec ? Math.round(recScore) : "—";
       $("recovery-ring-num").style.color = hasRec ? "var(--text)" : "var(--text-faint)";
     }
-    if ($("recovery-meta")) {
-      if (!hasRec) {
-        $("recovery-meta").textContent = "needs overnight HRV";
-        $("recovery-meta").style.color = "var(--text-faint)";
-      } else {
-        const labels = { good: "OPTIMAL", mid: "ADEQUATE", bad: "LOW" };
-        const tier = recScore >= 67 ? "good" : recScore >= 33 ? "mid" : "bad";
-        $("recovery-meta").textContent = labels[tier];
-        $("recovery-meta").style.color = color;
-      }
-    }
+    if ($("recovery-ring-denom")) $("recovery-ring-denom").textContent = "/100";
     if ($("recovery-ring-foot")) {
-      if (hasRec) {
-        const prior = trend7.slice(0, -1);
-        const hrvBase = (() => {
-          const vs = prior.map((r) => r.rmssd_ms).filter((v) => v != null);
-          return vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null;
-        })();
-        const hrvDelta = (m.rmssd_ms != null && hrvBase != null) ? m.rmssd_ms - hrvBase : null;
-        const arrow = (d) => d == null ? "" : `<span style="color:${d > 0 ? "var(--recovery)" : "var(--bad)"}">${d > 0 ? "↑" : d < 0 ? "↓" : "·"} ${d > 0 ? "+" : ""}${Math.round(d)}</span>`;
-        $("recovery-ring-foot").innerHTML =
-          `<span>HRV <strong>${fmtInt(m.rmssd_ms)} ms</strong> ${arrow(hrvDelta)}</span><span>RHR <strong>${fmtInt(m.resting_hr)} bpm</strong></span>`;
-      } else {
-        $("recovery-ring-foot").innerHTML = `<span>Wear your strap overnight to compute recovery</span>`;
-      }
+      $("recovery-ring-foot").textContent = hasRec
+        ? `${Math.max(0, 100 - Math.round(recScore))}% left`
+        : "Needs overnight HRV";
     }
   }
 
-  // ─── Strain ring (cyan) ────────────────────────────────────────
   if ($("strain-ring")) {
-    const strain = m.strain_score ?? 0;
-    drawRing($("strain-ring"), m.strain_score, "#03B5F3", 21, { stroke: 18, colorTo: "#00D4FF" });
+    drawProgressRing($("strain-ring"), strainVal, COLORS.strain, 21, { stroke: 11 });
     if ($("strain-ring-num")) {
-      $("strain-ring-num").textContent = m.strain_score != null ? strain.toFixed(1) : "—";
+      $("strain-ring-num").textContent = strainVal != null ? strainVal.toFixed(1) : "—";
+      $("strain-ring-num").style.color = strainVal != null ? "var(--text)" : "var(--text-faint)";
     }
-    if ($("strain-meta")) {
-      $("strain-meta").textContent = m.strain_score == null
-        ? "no activity yet"
-        : `${strainLabel(strain).toUpperCase()}`;
-      $("strain-meta").style.color = "var(--strain)";
-    }
+    if ($("strain-ring-denom")) $("strain-ring-denom").textContent = "/21";
     if ($("strain-ring-foot")) {
-      $("strain-ring-foot").innerHTML = m.strain_score != null
-        ? `<span><strong>${fmtInt(m.calories)}</strong> kcal burned</span><span>scale 0–21</span>`
-        : `<span>Start moving — strain will update through the day</span>`;
+      if (strainVal == null) {
+        $("strain-ring-foot").textContent = "Start moving today";
+      } else {
+        const left = Math.max(0, strainBudget - strainVal);
+        $("strain-ring-foot").textContent = `${left.toFixed(1)} left`;
+      }
     }
   }
 
@@ -1627,6 +1622,7 @@ function init() {
   initTabs();
   initDrawer();
   initTrendsControls();
+  initOverviewAccordion();
   applyDisplayName();
   setTopbarBattery(null);
   refreshAll();
@@ -1648,6 +1644,56 @@ window.refreshAll = refreshAll;
 window.setTab = setTab;
 window.setTopbarBattery = setTopbarBattery;
 window.whoofLoadLive = () => loadLive().catch((e) => setStatus("error: " + e.message));
+
+/* ───────────────────────────── Overview accordion wiring ────────────── */
+
+let _overviewAccordionInit = false;
+function initOverviewAccordion() {
+  if (_overviewAccordionInit) return;
+  const root = document.getElementById("overview-accordion");
+  if (!root) return;
+  _overviewAccordionInit = true;
+
+  function setExpanded(section, expand) {
+    const items = root.querySelectorAll(".overview-accordion-item");
+    items.forEach((item) => {
+      const s = item.dataset.section;
+      const header = item.querySelector(".overview-accordion-header");
+      const panel = item.querySelector(".overview-accordion-panel");
+      if (!header || !panel) return;
+      if (s === section) {
+        const next = expand !== undefined ? expand : header.getAttribute("aria-expanded") !== "true";
+        header.setAttribute("aria-expanded", next ? "true" : "false");
+        panel.hidden = !next;
+      } else {
+        header.setAttribute("aria-expanded", "false");
+        panel.hidden = true;
+      }
+    });
+  }
+
+  root.addEventListener("click", (ev) => {
+    const header = ev.target.closest(".overview-accordion-header");
+    if (!header || !root.contains(header)) return;
+    const item = header.closest(".overview-accordion-item");
+    if (!item) return;
+    const section = item.dataset.section;
+    const currentlyOpen = header.getAttribute("aria-expanded") === "true";
+    // Accordion: only one open; allow collapsing all when clicking open header again.
+    setExpanded(section, !currentlyOpen);
+  });
+
+  root.addEventListener("keydown", (ev) => {
+    if (ev.key !== "Enter" && ev.key !== " ") return;
+    const header = ev.target.closest(".overview-accordion-header");
+    if (!header || !root.contains(header)) return;
+    ev.preventDefault();
+    header.click();
+  });
+
+  // Ensure initial state matches default markup (plan open).
+  setExpanded("plan", true);
+}
 
 // --- ECG Monitor (RR-driven) ---
 (function () {

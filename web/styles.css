@@ -774,6 +774,18 @@ main.content {
   }
   #plan-card { text-align: center; }
 
+  /* Overview metric rings — stack on narrow viewports */
+  .metric-rings-card {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 20px 14px 18px;
+  }
+  .metric-ring-wrap {
+    width: 128px;
+    height: 128px;
+  }
+  .metric-ring-num { font-size: 38px; }
+
   /* Hero ring trio stacks; ring smaller */
   .hero-ring-row {
     grid-template-columns: 1fr;
@@ -1066,6 +1078,10 @@ main.content {
   .phone-sheet-body > .tab-panel .chart-wrap.tall {
     height: 180px;
   }
+  .phone-sheet-body > .tab-panel .metric-rings-card {
+    margin-top: 12px;
+    padding: 20px 12px 16px;
+  }
   .phone-sheet-body > .tab-panel .hero-ring-row {
     margin-top: 12px;
     justify-items: center;
@@ -1112,7 +1128,128 @@ main.content {
 }
 
 /* ───────────────────────────────────────────────── */
-/* Hero rings (Whoop-style)                            */
+/* Overview metric rings (reference-style trio)        */
+/* ───────────────────────────────────────────────── */
+
+.metric-rings-card {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 24px;
+  padding: 28px 20px 22px;
+  background: linear-gradient(180deg, var(--surface-1) 0%, #08080C 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.metric-rings-card + .grid {
+  margin-top: 32px;
+}
+
+.metric-ring-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 8px;
+  min-width: 0;
+}
+.metric-ring-col.ring-card-link {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s ease;
+  border-radius: var(--radius-sm);
+}
+.metric-ring-col.ring-card-link:active {
+  opacity: 0.88;
+}
+
+.metric-ring-label {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-bottom: 18px;
+}
+.metric-ring-col.sleep .metric-ring-label { color: var(--sleep); }
+.metric-ring-col.recovery .metric-ring-label { color: var(--recovery); }
+.metric-ring-col.strain .metric-ring-label { color: var(--strain); }
+
+.metric-ring-wrap {
+  position: relative;
+  width: 148px;
+  height: 148px;
+}
+.metric-ring-wrap svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.metric-ring-value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  line-height: 1.1;
+}
+.metric-ring-num {
+  font-family: var(--font-display);
+  font-size: 44px;
+  font-weight: 300;
+  letter-spacing: -0.04em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.metric-ring-denom {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-ring-foot {
+  margin-top: 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 720px) {
+  .metric-rings-card {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 24px 16px 20px;
+  }
+  .metric-ring-wrap {
+    width: 132px;
+    height: 132px;
+  }
+  .metric-ring-num {
+    font-size: 40px;
+  }
+}
+
+@media (min-width: 721px) and (max-width: 1280px) {
+  .metric-ring-wrap {
+    width: 120px;
+    height: 120px;
+  }
+  .metric-ring-num {
+    font-size: 36px;
+  }
+  .metric-ring-label {
+    font-size: 14px;
+    margin-bottom: 14px;
+  }
+}
+
+/* ───────────────────────────────────────────────── */
+/* Hero rings (Whoop-style) — detail tab pages       */
 /* ───────────────────────────────────────────────── */
 
 .hero-ring-row {
@@ -1378,6 +1515,72 @@ main.content {
   color: var(--strain);
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
+}
+
+/* Overview accordion (Today page compact list) */
+.overview-accordion {
+  padding: 10px 0;
+}
+.overview-accordion-item {
+  border-bottom: 1px solid var(--hairline);
+}
+.overview-accordion-item:last-of-type {
+  border-bottom: none;
+}
+.overview-accordion-header {
+  width: 100%;
+  padding: 10px 18px;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  color: var(--text-2);
+  font: 500 13px var(--font);
+  text-align: left;
+}
+.overview-accordion-header:hover {
+  background: rgba(255,255,255,0.02);
+}
+.overview-accordion-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.overview-accordion-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.overview-accordion-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.overview-accordion-chevron {
+  font-size: 11px;
+  color: var(--text-muted);
+  transition: transform 150ms ease;
+}
+.overview-accordion-header[aria-expanded="true"] .overview-accordion-chevron {
+  transform: rotate(180deg);
+}
+.overview-accordion-panel {
+  padding: 0 14px 14px 14px;
+}
+.overview-accordion-card {
+  margin-top: 4px;
+}
+
+@media (max-width: 720px) {
+  .overview-accordion {
+    padding: 6px 0;
+  }
+  .overview-accordion-header {
+    padding: 8px 14px;
+  }
+  .overview-accordion-panel {
+    padding: 0 10px 10px 10px;
+  }
 }
 
 /* Insights */

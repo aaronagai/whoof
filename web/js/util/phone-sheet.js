@@ -88,6 +88,7 @@ export class PhoneSheet {
     this.backdrop?.classList.remove("open");
     document.body.classList.remove("phone-sheet-open");
     window.whoofTopbarScrollRefresh?.();
+    window.whoofEnsureTodayInCarousel?.();
     const root = this.root;
     const backdrop = this.backdrop;
     window.setTimeout(() => {
