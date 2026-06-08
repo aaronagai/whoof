@@ -256,26 +256,6 @@
       <span class="panel-date" id="overview-date"></span>
     </header>
 
-    <div class="grid" style="margin: 0 0 16px 0;">
-      <div class="card span-4">
-        <span class="card-eyebrow">Live heart rate</span>
-        <div class="now-tile" style="grid-template-columns: auto 1fr; gap: 24px;">
-          <div class="now-hr" style="font-size:64px;">
-            <span id="now-hr">—</span><span class="unit">bpm</span>
-            <span class="heart-pulse">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg>
-            </span>
-          </div>
-          <div class="now-grid">
-            <div><span class="lbl">SpO₂</span><span id="now-spo2">—</span></div>
-            <div><span class="lbl">Skin temp</span><span id="now-temp">—</span></div>
-            <div><span class="lbl">Battery</span><span id="now-battery">—</span></div>
-            <div><span class="lbl">Updated</span><span id="now-ago">—</span></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Sleep / Recovery / Strain — three progress rings (Today overview) -->
     <div class="metric-rings-card">
       <div class="metric-ring-col sleep ring-card-link" data-nav-tab="sleep" role="button" tabindex="0" aria-label="Open Sleep">
@@ -307,6 +287,26 @@
           <div class="metric-ring-value">
             <span class="metric-ring-num" id="strain-ring-num">—</span>
             <span class="metric-ring-denom" id="strain-ring-denom">/21</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid overview-live-grid" style="margin: 0 0 16px 0;">
+      <div class="card span-4">
+        <span class="card-eyebrow">Live heart rate</span>
+        <div class="now-tile" style="grid-template-columns: auto 1fr; gap: 24px;">
+          <div class="now-hr" style="font-size:64px;">
+            <span id="now-hr">—</span><span class="unit">bpm</span>
+            <span class="heart-pulse">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg>
+            </span>
+          </div>
+          <div class="now-grid">
+            <div><span class="lbl">SpO₂</span><span id="now-spo2">—</span></div>
+            <div><span class="lbl">Skin temp</span><span id="now-temp">—</span></div>
+            <div><span class="lbl">Battery</span><span id="now-battery">—</span></div>
+            <div><span class="lbl">Updated</span><span id="now-ago">—</span></div>
           </div>
         </div>
       </div>
