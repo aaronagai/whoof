@@ -12,7 +12,6 @@ license = "MIT"
 authors = [{ name = "Madhur Satija" }]
 keywords = ["whoop", "ble", "bluetooth", "hrv", "heart-rate", "fitness"]
 dependencies = [
-  "whoop-reader>=0.1.0",
   "click>=8.1.0",
 ]
 

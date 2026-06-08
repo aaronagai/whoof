@@ -8,7 +8,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator, Optional
 
-from whoop_reader.parser import RealtimePacket
+try:
+    from whoop_reader.parser import RealtimePacket
+except ImportError:
+    RealtimePacket = object  # type: ignore[misc,assignment]
 
 DEFAULT_DB = Path(__file__).resolve().parent.parent / "data" / "whoop.db"
 

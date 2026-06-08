@@ -341,8 +341,21 @@ function friendlyBleError(err) {
   if (name === 'NotSupportedError' || /not supported/i.test(msg)) {
     return "Web Bluetooth isn't supported in this browser. Use desktop Chrome / Edge / Brave / Arc on Mac or Windows, or Bluefy on iPhone.";
   }
+  if (name === 'NotAllowedError' || /permission/i.test(msg) || /not allowed/i.test(msg)) {
+    const ua = navigator.userAgent;
+    const isIPhone = /iPhone|iPad|iPod/.test(ua);
+    if (isIPhone) {
+      return "Bluefy needs Bluetooth permission. Go to iPhone Settings → Bluefy → enable Bluetooth, then try again.";
+    }
+    return "Bluetooth permission denied. Allow Bluetooth for this browser in system settings, then try again.";
+  }
   if (/gatt/i.test(msg)) {
-    return `Bluetooth connection dropped (${msg}). Move closer to the strap and click Connect again.`;
+    const ua = navigator.userAgent;
+    const isIPhone = /iPhone|iPad|iPod/.test(ua);
+    const hint = isIPhone
+      ? " Force-quit the official WHOOP app (swipe up in App Switcher) — a strap can only talk to one app at a time."
+      : "";
+    return `Bluetooth connection dropped (${msg}).${hint} Move closer to the strap and click Connect again.`;
   }
   return `Bluetooth: ${msg}`;
 }
@@ -915,9 +928,9 @@ async function renderInsights() {
   }
 }
 
+initTopbarScroll();
 initPhoneNavSheets();
 initPhoneBleSheet();
-initTopbarScroll();
 
 // Refresh insights whenever data changes or on a slow ticker
 window.addEventListener('whoop-data-changed', () => renderInsights());

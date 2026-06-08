@@ -11,8 +11,6 @@ import signal
 from datetime import datetime, timezone
 from typing import Optional
 
-from whoop_reader.ble import WhoopConnection, scan_for_whoops
-
 from . import db
 
 logger = logging.getLogger(__name__)
@@ -22,7 +20,7 @@ RECONNECT_MAX = 120.0
 BATTERY_POLL_SECONDS = 600.0  # every 10 min
 
 
-async def _battery_poller(con, whoop: WhoopConnection, stop: asyncio.Event) -> None:
+async def _battery_poller(con, whoop, stop: asyncio.Event) -> None:
     """Background task: log battery level periodically."""
     while not stop.is_set():
         try:
@@ -52,6 +50,7 @@ async def _record_once(
         if address:
             device = address
         else:
+            from whoop_reader.ble import scan_for_whoops  # noqa: PLC0415
             logger.info("Scanning for Whoop devices...")
             devs = await scan_for_whoops(timeout=10.0)
             if not devs:
@@ -60,6 +59,7 @@ async def _record_once(
             device = devs[0]
             logger.info("Using device: %s (%s)", device.name, device.address)
 
+        from whoop_reader.ble import WhoopConnection  # noqa: PLC0415
         async with WhoopConnection(device) as whoop:
             db.log_event(con, "connect", str(device))
             sess_id = db.start_session(con, label=label)

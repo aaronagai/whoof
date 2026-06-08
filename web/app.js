@@ -34,7 +34,15 @@ function applyDisplayName(date = new Date()) {
   const name = getDisplayName() || "Aaron";
   const greeting = timeGreeting(date);
   const welcomeEl = document.querySelector(".welcome-text");
-  if (welcomeEl) welcomeEl.textContent = `${greeting}, ${name}`;
+  if (welcomeEl) {
+    welcomeEl.replaceChildren(
+      document.createTextNode(`${greeting}, `),
+      Object.assign(document.createElement("span"), {
+        className: "welcome-name",
+        textContent: `${name}.`,
+      })
+    );
+  }
 
   const nameEl = $("profile-name");
   if (nameEl) nameEl.innerHTML = `${name || "You"} <span class="chevron">▾</span>`;
@@ -613,7 +621,6 @@ async function loadOverview() {
   const hasRec = m.recovery_score != null && m.recovery_score > 0 && m.rmssd_ms != null;
   const recScore = hasRec ? m.recovery_score : null;
   const strainVal = m.strain_score;
-  const strainBudget = recScore != null ? (recScore / 100) * 21 : 21;
 
   if ($("sleep-ring")) {
     drawProgressRing($("sleep-ring"), sleepPerf, COLORS.sleep, 100, { stroke: 11 });
@@ -622,11 +629,6 @@ async function loadOverview() {
       $("sleep-ring-num").style.color = hasSleep ? "var(--text)" : "var(--text-faint)";
     }
     if ($("sleep-ring-denom")) $("sleep-ring-denom").textContent = "/100";
-    if ($("sleep-ring-foot")) {
-      $("sleep-ring-foot").textContent = hasSleep
-        ? `${Math.max(0, 100 - Math.round(sleepPerf))}% left`
-        : "Wear strap overnight";
-    }
   }
 
   if ($("recovery-ring")) {
@@ -637,11 +639,6 @@ async function loadOverview() {
       $("recovery-ring-num").style.color = hasRec ? "var(--text)" : "var(--text-faint)";
     }
     if ($("recovery-ring-denom")) $("recovery-ring-denom").textContent = "/100";
-    if ($("recovery-ring-foot")) {
-      $("recovery-ring-foot").textContent = hasRec
-        ? `${Math.max(0, 100 - Math.round(recScore))}% left`
-        : "Needs overnight HRV";
-    }
   }
 
   if ($("strain-ring")) {
@@ -651,14 +648,6 @@ async function loadOverview() {
       $("strain-ring-num").style.color = strainVal != null ? "var(--text)" : "var(--text-faint)";
     }
     if ($("strain-ring-denom")) $("strain-ring-denom").textContent = "/21";
-    if ($("strain-ring-foot")) {
-      if (strainVal == null) {
-        $("strain-ring-foot").textContent = "Start moving today";
-      } else {
-        const left = Math.max(0, strainBudget - strainVal);
-        $("strain-ring-foot").textContent = `${left.toFixed(1)} left`;
-      }
-    }
   }
 
   // Now card

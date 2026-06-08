@@ -93,7 +93,7 @@ function ensureCarousel() {
   carouselReady = true;
   if (liveOpen) carousel.classList.add("is-live");
   ensureTodayInCarousel();
-  window.whoofTopbarScrollRefresh?.();
+  queueMicrotask(() => window.whoofTopbarScrollRefresh?.());
   return true;
 }
 

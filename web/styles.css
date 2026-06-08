@@ -504,6 +504,7 @@ main.content {
   -webkit-backdrop-filter: saturate(180%) blur(var(--topbar-blur));
   backdrop-filter: saturate(180%) blur(var(--topbar-blur));
   border-bottom-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 .top-bar-left, .top-bar-right { display: flex; align-items: center; gap: 14px; }
 
@@ -637,6 +638,11 @@ main.content {
   background-clip: text;
   color: transparent;
 }
+.welcome-name {
+  color: #D4AF37;
+  -webkit-text-fill-color: #D4AF37;
+  background: none;
+}
 
 .controls { display: flex; gap: 8px; }
 .controls select, .controls input {
@@ -724,11 +730,20 @@ main.content {
 /* ───────────────────────────────────────────────── */
 
 @media (max-width: 720px) {
+  html {
+    height: 100%;
+    overflow: hidden;
+  }
+
   body {
     grid-template-columns: 1fr;
     /* Respect iOS safe-areas (notch on left in landscape, home indicator) */
     padding-left:  var(--sa-left);
     padding-right: var(--sa-right);
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    overscroll-behavior: none;
   }
   .sidebar { display: none; }
 
@@ -737,12 +752,16 @@ main.content {
     padding: 12px var(--content-pad-x) calc(var(--phone-nav-h) + 16px + var(--sa-bottom)) var(--content-pad-x); /* leave room for bottom nav */
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    min-height: 100dvh;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
   }
 
   /* Make topbar compact + respect status-bar inset */
   .top-bar {
+    flex-shrink: 0;
     height: auto;
     min-height: var(--phone-topbar-min);
     padding-top: var(--sa-top);
@@ -774,17 +793,28 @@ main.content {
   }
   #plan-card { text-align: center; }
 
-  /* Overview metric rings — stack on narrow viewports */
+  /* Overview metric rings — three across on phone */
   .metric-rings-card {
-    grid-template-columns: 1fr;
-    gap: 20px;
-    padding: 20px 14px 18px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 16px 8px 14px;
+  }
+  .metric-ring-col {
+    padding: 0 2px;
+  }
+  .metric-ring-label {
+    font-size: 12px;
+    margin-bottom: 8px;
   }
   .metric-ring-wrap {
-    width: 128px;
-    height: 128px;
+    width: 100%;
+    max-width: 108px;
+    height: auto;
+    aspect-ratio: 1;
+    margin: 0 auto;
   }
-  .metric-ring-num { font-size: 38px; }
+  .metric-ring-num { font-size: 28px; }
+  .metric-ring-denom { font-size: 10px; }
 
   /* Hero ring trio stacks; ring smaller */
   .hero-ring-row {
@@ -851,7 +881,7 @@ main.content {
 
   /* Today + Live carousel pages (side-by-side horizontal track) */
   .phone-page-carousel {
-    flex: 1 1 auto;
+    flex: 1 1 0;
     min-height: 0;
     overflow: hidden;
     margin-left: calc(-1 * var(--content-pad-x) - var(--sa-left));
@@ -862,6 +892,7 @@ main.content {
     display: flex;
     width: 200%;
     height: 100%;
+    min-height: 0;
     transform: translateX(-50%);
     transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
     will-change: transform;
@@ -872,10 +903,13 @@ main.content {
   .phone-page-slide {
     flex: 0 0 50%;
     width: 50%;
+    height: 100%;
     min-height: 0;
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     padding: 0 calc(var(--content-pad-x) + var(--sa-left)) 0 calc(var(--content-pad-x) + var(--sa-right));
   }
   .phone-page-slide > .tab-panel {
@@ -1165,13 +1199,12 @@ main.content {
 
 .metric-ring-label {
   font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   margin-bottom: 18px;
+  color: #D4AF37;
 }
-.metric-ring-col.sleep .metric-ring-label { color: var(--sleep); }
-.metric-ring-col.recovery .metric-ring-label { color: var(--recovery); }
-.metric-ring-col.strain .metric-ring-label { color: var(--strain); }
 
 .metric-ring-wrap {
   position: relative;
@@ -1211,26 +1244,21 @@ main.content {
   font-variant-numeric: tabular-nums;
 }
 
-.metric-ring-foot {
-  margin-top: 14px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
 @media (max-width: 720px) {
   .metric-rings-card {
-    grid-template-columns: 1fr;
-    gap: 24px;
-    padding: 24px 16px 20px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 16px 8px 14px;
   }
   .metric-ring-wrap {
-    width: 132px;
-    height: 132px;
+    width: 100%;
+    max-width: 108px;
+    height: auto;
+    aspect-ratio: 1;
+    margin: 0 auto;
   }
   .metric-ring-num {
-    font-size: 40px;
+    font-size: 28px;
   }
 }
 

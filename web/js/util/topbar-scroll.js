@@ -17,14 +17,28 @@ function scrollTop(el) {
   return el.scrollTop || 0;
 }
 
+/** Slides that can scroll on phone (bind listeners to all of them). */
+function phoneSlides() {
+  const carousel = document.getElementById("phone-page-carousel");
+  if (!carousel) return [];
+  return [...carousel.querySelectorAll(".phone-page-slide")];
+}
+
+/** Which slide's scroll position should drive the frosted state right now. */
+function activePhoneSlide() {
+  const carousel = document.getElementById("phone-page-carousel");
+  if (!carousel) return null;
+  const page = carousel.classList.contains("is-live") ? "live" : "overview";
+  return carousel.querySelector(`.phone-page-slide[data-phone-page="${page}"]`);
+}
+
 /** Scroll containers that should drive top-bar state for the current layout. */
 function activeScrollContainers() {
   const out = [];
   const carousel = document.getElementById("phone-page-carousel");
 
   if (carousel) {
-    const page = carousel.classList.contains("is-live") ? "live" : "overview";
-    const slide = carousel.querySelector(`.phone-page-slide[data-phone-page="${page}"]`);
+    const slide = activePhoneSlide();
     if (slide) out.push(slide);
   } else {
     out.push(window);
@@ -36,6 +50,16 @@ function activeScrollContainers() {
   }
 
   return out;
+}
+
+/** Every scrollable region we should listen to (may be wider than active). */
+function scrollListenTargets() {
+  const targets = [window, ...phoneSlides()];
+  if (document.body.classList.contains("phone-sheet-open")) {
+    const sheetBody = document.querySelector(".phone-sheet.open .phone-sheet-body");
+    if (sheetBody) targets.push(sheetBody);
+  }
+  return targets;
 }
 
 function bindScrollTarget(target) {
@@ -63,8 +87,7 @@ export function scheduleTopbarUpdate() {
 
 /** Re-bind listeners after carousel/sheet layout changes and sync class. */
 export function refreshTopbarScroll() {
-  bindScrollTarget(window);
-  for (const el of activeScrollContainers()) bindScrollTarget(el);
+  for (const el of scrollListenTargets()) bindScrollTarget(el);
   scheduleTopbarUpdate();
 }
 
@@ -73,6 +96,8 @@ export function initTopbarScroll() {
   if (!topBar) return;
 
   refreshTopbarScroll();
+  requestAnimationFrame(refreshTopbarScroll);
+  window.addEventListener("load", refreshTopbarScroll, { once: true });
 
   window.addEventListener("scroll", scheduleTopbarUpdate, { passive: true });
   window.addEventListener("resize", scheduleTopbarUpdate, { passive: true });
